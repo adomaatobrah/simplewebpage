@@ -5,6 +5,6 @@ app = Flask(__name__)
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/predict')
+@app.route('/predict', methods=['POST'])
 def predict_scoring():
     return 'Your predicted score is 0.'
