@@ -6,5 +6,10 @@ def hello_world():
     return 'Hello, World!'
 
 @app.route('/predict')
+def predict_form():
+    return render_template('predict-form.html')
+
+@app.route('/predict', methods=['POST'])
 def predict_scoring():
-    return 'Your predicted score is 0.'
+    prompt_text = request.form['text']
+    return prompt_text
