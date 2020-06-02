@@ -12,4 +12,4 @@ def predict_form():
 @app.route('/predict', methods=['POST'])
 def predict_scoring():
     prompt_text = request.form['text']
-    return 'prompt_text'
+    return prompt_text
