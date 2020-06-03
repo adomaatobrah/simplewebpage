@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <title>Phrase Predictability Scorer</title>
+    <style>
+      .title
+      {
+        font-size:      24px;
+        font-weight:    bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="title">Results</div>
+    <p>The phrase you entered was: {{ prompt }}</p>
+    <ul>
+      {%for l in range(0, len)%}
+        <p>{{ twodarray[l] }}</p>
+        {%if positions[l] != None%}
+          <p>"{{ words[l] }}" was found at position: {{ positions[l] }}</p>
+        {%else%}
+          <p>"{{ words[l] }}" was not found in the top {{ depth }} results</p>	
+        {%endif%}
+      {%endfor%}
+    </ul>
+    <p>The predictability score for the top {{ depth }} results is: {{ final_score }}</p>
+  </body>
+</html>
