@@ -14,7 +14,17 @@
     <p>The phrase you entered was: {{ prompt }}</p>
     <ul>
       {%for l in range(0, len)%}
-        <p>{{ twodarray[l] }}</p>
+        <p>
+          [
+          {%for i in twodarray[l]%}
+            {%if positions[l] == twodarray[l].index(i)%}
+              <mark>'{{ i }}',</mark>
+            {%else%}
+              '{{ i }}',
+            {%endif%}
+          {%endfor%}
+          ]
+        </p>
         {%if positions[l] != None%}
           <p>"{{ words[l] }}" was found at position: {{ positions[l] }}</p>
         {%else%}
