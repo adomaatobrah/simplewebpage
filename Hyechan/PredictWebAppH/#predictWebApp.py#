@@ -1,0 +1,24 @@
+from flask import Flask, request, render_template
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+@app.route('/predict')
+def predict_form():
+    return render_template('predict-form.html')
+
+@app.route('/predict', methods=['POST'])
+def predict_scoring():
+    prompt_text = request.form['text']
+    import torch
+    from transformers import *
+
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    model = GPT2LMHeadModel.from_pretrained('gpt2')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    prompt_text = input("Input something: ")
+    encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
+    return prompt_text
