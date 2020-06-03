@@ -1,3 +1,6 @@
+# This code is a mess, for a cleaner version look at the web app
+#   in PredictWebAppH
+
 import torch
 from transformers import *
 
@@ -14,8 +17,8 @@ prediction_scores, past = model.forward(encoded_prompt)
 
 prediction_scores.shape
 
-score = 0;
-next_pos = 1;
+score = 0
+next_pos = 1
 print("The given sentence was: " + prompt_text + "\n")
 for word in prediction_scores[0]:
     if next_pos >= len(encoded_prompt[0]):
