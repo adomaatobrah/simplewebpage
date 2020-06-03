@@ -9,14 +9,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 app = Flask(__name__)
 
 @app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
-@app.route('/predict')
 def predict_form():
     return render_template('predict-form.html')
 
-@app.route('/predict', methods=['POST'])
+@app.route('/', methods=['POST'])
 def predict_scoring():
     prompt_text = request.form['text']
     num = int(request.form['num'])
@@ -33,11 +29,13 @@ def predict_scoring():
         checklist = [index.item() for index in word.topk(num).indices]
         results = [tokenizer.decode(index.item()) for index in word.topk(num).indices]
         
-
         if encoded_prompt[0, next_pos] in word.topk(num).indices:
             listpos = checklist.index(encoded_prompt[0, next_pos])
-            score = score + ((50257 - listpos)/50257)
+            score = score + ((len(prediction_scores[0, next_pos]) - listpos)/len(prediction_scores[0, next_pos]))
 
         next_pos = next_pos + 1
-    
-    return "The predictability of \'" + prompt_text + "\' is: " + str(score / (len(encoded_prompt[0]) - 1))
+                             
+    return render_template('result.html',
+                           prompt = prompt_text,
+                           final_score = score / (len(encoded_prompt[0]) - 1),
+                           depth = num)
