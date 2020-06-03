@@ -15,12 +15,15 @@ def predict_form():
 @app.route('/', methods=['POST'])
 def predict_scoring():
     prompt_text = request.form['text']
-    num = int(request.form['num'])
+    search_depth = int(request.form['num'])
     encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
     prediction_scores, past = model.forward(encoded_prompt)
+    batch_size, num_words, vocab = prediction_scores.shape
 
     score = 0
     next_pos = 1
+
+    # Used for returning to html
     twodresults = []
     poslist = []
     wordlist = []
@@ -28,26 +31,33 @@ def predict_scoring():
     for word in prediction_scores[0]:
         if next_pos >= len(encoded_prompt[0]):
             break
+        
+        next_word = encoded_prompt[0, next_pos]
+        predicted_words = word.topk(search_depth).indices
+        predicted_words_list = []
+        results = []
 
-        checklist = [index.item() for index in word.topk(num).indices]
-        results = [tokenizer.decode(index.item()) for index in word.topk(num).indices]
+        for index in predicted_words:
+            predicted_words_list.append(index.item())
+            results.append(tokenizer.decode(index.item()))
+
         twodresults.append(results)
         
-        if encoded_prompt[0, next_pos] in word.topk(num).indices:
-            listpos = checklist.index(encoded_prompt[0, next_pos])
+        if next_word in predicted_words:
+            listpos = predicted_words_list.index(next_word)
             poslist.append(listpos)
-            wordlist.append(tokenizer.decode(encoded_prompt[0, next_pos].item()))
-            score = score + ((len(prediction_scores[0, next_pos]) - listpos)/len(prediction_scores[0, next_pos]))
+            wordlist.append(tokenizer.decode(next_word.item()))
+            score += 1 - listpos/vocab
         else:
-            wordlist.append(tokenizer.decode(encoded_prompt[0, next_pos].item()))
+            wordlist.append(tokenizer.decode(next_word.item()))
             poslist.append(None)
             
         next_pos = next_pos + 1
                              
     return render_template('result.html',
                            prompt = prompt_text,
-                           final_score = score / (len(encoded_prompt[0]) - 1),
-                           depth = num,
+                           final_score = score / (num_words - 1),
+                           depth = search_depth,
                            twodarray = twodresults,
                            len = len(twodresults),
                            positions = poslist,
