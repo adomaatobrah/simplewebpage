@@ -7,7 +7,6 @@ app = Flask(__name__)
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 
-
 @app.route('/')
 def form():
     return render_template("home.html")
@@ -26,24 +25,50 @@ def result():
 
     num = 0
     predictability = 0
-    decoded_prediction_list = []
-    prediction_str = ""
+    list_of_dicts = []
+    input_tuples = []
+
+    first_word = tokenizer.decode(encoded_prompt[0, 0].item())
+    input_tuples.append((first_word, "white"))
 
     for x in range(0, encoded_prompt.numel()-1):
+        prediction_dict = {}
         prediction_list = [(index.item()) for index in prediction_scores[0, num].topk(num_results).indices]
-        decoded_prediction_list.append([tokenizer.decode(index.item()) for index in prediction_scores[0, num].topk(num_results).indices])
-    
-        if encoded_prompt[0, num+1] in prediction_list:
-            predictability_rank = prediction_list.index(encoded_prompt[0, num+1])
-            predictability += 1 - predictability_rank / vocabulary_size
+
+        for index in prediction_scores[0, num].topk(num_results).indices:
+            word = tokenizer.decode(index.item())
+            if index.item() == encoded_prompt[0, num+1]:
+                prediction_dict.update({word:"blue"})
+                predictability_rank = prediction_list.index(encoded_prompt[0, num+1])
+                predictability += 1 - predictability_rank / vocabulary_size
+            else:
+                prediction_dict.update({word : "black"})
+
+        list_of_dicts.append(prediction_dict)
+        
+        top10_prediction_list = [(index.item()) for index in prediction_scores[0, num].topk(10).indices]
+        top100_prediction_list = [(index.item()) for index in prediction_scores[0, num].topk(100).indices]
+        
+        next_word = tokenizer.decode(encoded_prompt[0, num+1].item())
+        if encoded_prompt[0, num+1] in top10_prediction_list:
+            input_tuples.append((next_word, "aquamarine"))
+        elif encoded_prompt[0, num+1] in top100_prediction_list:
+            input_tuples.append((next_word, "yellow"))
+        else:
+            input_tuples.append((next_word, "red"))
+
+
         
         num += 1
 
-    wordnum = 2
-    for wordnum, ele in enumerate(decoded_prediction_list):
-        prediction_str = prediction_str + "\nword " + str(wordnum) + ": " + str(ele) 
-        wordnum += 1
+    final_score = str(predictability/(encoded_prompt.numel()-1))
+
+    print(prediction_scores[0,0].topk(5).indices)
     
-    resulttext = "Predictability score for \"" + prompt_text + "\": " + str(predictability/(encoded_prompt.numel()-1))
-    
-    return render_template("home.html", predictions = prediction_str, result = resulttext)
+    return render_template("home.html", 
+                            predictions = list_of_dicts,  
+                            usertext = prompt_text, 
+                            score = final_score,
+                            inputwords = input_tuples)
+
+
