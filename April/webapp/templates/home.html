@@ -2,14 +2,14 @@
 <style>
 .center {
     margin: auto;
-    width: 50%;
+    max-width: 800px;
     border: 3px solid black;
     padding: 10px;
   }
 
 .results {
     margin: auto;
-    width: 50%;
+    max-width: 800px;
    padding: 10px;
 }  
 </style>
@@ -25,8 +25,17 @@
     </div><br>
 
     <div class="results">
-    <strong>Your input:</strong> {{ usertext }} <br>
-    <strong>Score (scale of 0 to 1):</strong> {{ score }}<br><br>
+    <strong>Your input:</strong>  <br>
+    
+    {% for pair in inputwords %}
+        {% set token, color = pair %}
+        <span style="background-color: {{ color }}; font-size:150%;">{{token}}</span>
+    {% endfor %} <br><br>
+    <span style="background-color:aquamarine;">Expected</span> (appeared in the first 10 predictions)<br>
+    <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
+    <span style="background-color:red;">Unexpected</span> (didn't appear in the first 100 predictions)<br><br>
+
+    <strong>Overall predictability score (scale of 0 to 1):</strong> {{ score }}<br><br>
     <strong>Predicted words:</strong><br>
     <ol start="2">
     {% for predictiondict in predictions %}
