@@ -55,17 +55,3 @@ def result():
         
         print("The predictability score for " + str(num) + " is: " + str(predictability/(encoded_prompt.numel()-1)))
         return render_template("home.html")
-
-	    	else:
-	    		Low_match = word in decoded_prediction_lists
-
-	    	#return decoded_prediction_list
-
-	    element_pos += 1
-
-	    
-	
-
-	# return ("The predictability score for " + str(prompt_text) + " is: " + str(predictability/(encoded_prompt.numel()-1)))
-	
-	return render_template("home.html")
