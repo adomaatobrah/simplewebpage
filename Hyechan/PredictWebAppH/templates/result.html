@@ -11,13 +11,19 @@
   </head>
   <body>
     <div class="title">Results</div>
-    <p>The phrase you entered was: {{ prompt }}</p>
+    <p>The phrase you entered was: </p>
+    <p>
+      {%for item in inputs%}
+        {%set currentWord, color = item%}
+        <mark style="background-color: {{ color }}; font-size:150%;">{{currentWord}}</mark>
+      {%endfor%}
+    </p>
     <ul>
       {%for l in range(0, len)%}
         <p>
           [
-          {%for i in twodarray[l]%}
-            {%if positions[l] == twodarray[l].index(i)%}
+          {%for i in predictions[l]%}
+            {%if positions[l] == predictions[l].index(i)%}
               <mark>'{{ i }}',</mark>
             {%else%}
               '{{ i }}',
