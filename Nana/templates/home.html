@@ -1,4 +1,6 @@
 <head>
+    <title><strong>Phrase Prediction</strong></title>}
+    
 </head>
 <body>
     <form method="GET">
@@ -6,7 +8,19 @@
         <input name="Num">
         <input type="submit">
     </form>
-    <span style="background-color:yellow">High_match</span>
-    <span style="background-color:#00FEFE">Medium_match</span>
-    <span style="background-color:#00FF00">Low_match</span>
+    <p>"The predictability score for"</p>
+    <p>{% for item in prompt_text%}
+        {% set word, color = item%} 
+    <p> "is"</p>
+
+    <span style="background-color: {{color}}">{{word}}</span>
+    {%endfor%}
+    </p>
+    <ul>
+
+    <br><span style="background-color:green;">Top 10 predicted words</span> (appeared in the first 10 predictions)<br>
+    <br><span style="background-color:yellow;">Top 100 predicted words</span> (appeared in the first 100 predictions)<br>
+    <br><span style="background-color:red;">Unexpected word</span> (didn't appear in the first 100 predictions)<br>
+    <ul>
+        
 </body>
