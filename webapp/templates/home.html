@@ -1,7 +1,43 @@
-  
-<html>
+<html> 
 <head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mystyle.css') }}">
+    <!--link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}"-->
+    <!--script src = "{{url_for('static', filename='js/script.js') }}"></script-->
+    <style>
+        .center {
+            margin: auto;
+            max-width: 800px;
+            border: 3px solid black;
+            padding: 10px;
+        }
+
+        .results {
+            margin: auto;
+            max-width: 800px;
+            padding: 10px;
+        }  
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            padding: 5px 0;
+            border-radius: 6px;
+        
+            position: absolute;
+            z-index: 1;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+        }
+    </style>
 </head>
     <body>
         <div class="center">
@@ -18,7 +54,30 @@
             
             {%for item in inputs%}
                 {%set currentWord, color = item%}
-                <mark style="background-color: {{ color }}; font-size:150%;">{{currentWord}}</mark>
+                {%set index = inputs.index(item)%}
+                
+                <mark class="tooltip" style="background-color: {{ color }}; font-size:150%;">
+                    <!--onmouseover="showPopUp({{ index }})" onmouseout="closePopUp({{ index }})"-->
+                    {{currentWord}}
+                    {%if index != 0%}
+                        <div id="{{ index }}" class="tooltiptext">
+                            [
+                            {%for i in predictions[index - 1]%}
+                                {%if positions[index - 1] == predictions[index - 1].index(i)%}
+                                    <mark>'{{ i }}',</mark>
+                                {%else%}
+                                    '{{ i }}',
+                                {%endif%}
+                            {%endfor%}
+                            ]
+                            {%if positions[index - 1] != None%}
+                                <p>"{{ currentWord }}" was found at position: {{ positions[index - 1] }}</p>
+                            {%else%}
+                                <p>"{{ currentWord }}" was not found in the top {{ depth }} results</p>	
+                            {%endif%}
+                        </div>
+                    {%endif%}
+                </mark>
             {%endfor%}
             <br><br>
             <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
@@ -26,29 +85,8 @@
             <span style="background-color:red;">Somewhat unpredictable</span> (appeared in the first 1000 predictions)<br>
             <span style="background-color:magenta;">Unexpected</span> (didn't appear in the first 1000 predictions)<br><br>
 
-        
             <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
-            <strong>Predicted words:</strong><br>
-            <ol start="2">
-                {%for l in range(0, len)%}
-                <li>
-                    [
-                    {%for i in predictions[l]%}
-                        {%if positions[l] == predictions[l].index(i)%}
-                            <mark>'{{ i }}',</mark>
-                        {%else%}
-                            '{{ i }}',
-                        {%endif%}
-                    {%endfor%}
-                    ]
-                </li>
-                    {%if positions[l] != None%}
-                        <p>"{{ words[l] }}" was found at position: {{ positions[l] }}</p>
-                    {%else%}
-                        <p>"{{ words[l] }}" was not found in the top {{ depth }} results</p>	
-                    {%endif%}
-                {%endfor%}
-            </ol>
+
         </div>
     </body>
 </html>
