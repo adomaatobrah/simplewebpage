@@ -1,11 +1,65 @@
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8">
-    <title>Flask Tutorial</title>
-  </head>
-  <body>
-    <h1> My First Try Using Flask </h1>
-    <p> Flask is Fun </p>
-  </body>
+<style>
+    .center {
+        margin: auto;
+        max-width: 800px;
+        border: 3px solid black;
+        padding: 10px;
+    }
+  
+    .results {
+        margin: auto;
+        max-width: 800px;
+        padding: 10px;
+    }  
+</style>
+  
+<html>
+    <body>
+        <div class="center">
+            <h2 style = "text-align:center">Input text to find out how easily a computer could predict it</h2>
+            <form action="/result" style = "text-align:center", method="POST">
+                Text: <input type='text' name='text'><br><br>
+                Predictions per word: <input type='text' name='number'><br><br>
+                <input type='submit' value='Continue'>
+            </form>
+        </div><br>
+
+        <div class="results">
+            <strong>Your input:</strong>  <br>
+            
+            {%for item in inputs%}
+                {%set currentWord, color = item%}
+                <mark style="background-color: {{ color }}; font-size:150%;">{{currentWord}}</mark>
+            {%endfor%}
+            <br><br>
+            <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
+            <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
+            <span style="background-color:red;">Somewhat unpredictable</span> (appeared in the first 1000 predictions)<br>
+            <span style="background-color:magenta;">Unexpected</span> (didn't appear in the first 1000 predictions)<br><br>
+
+        
+            <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
+            <strong>Predicted words:</strong><br>
+            <ol start="2">
+                {%for l in range(0, len)%}
+                <li>
+                    [
+                    {%for i in predictions[l]%}
+                        {%if positions[l] == predictions[l].index(i)%}
+                            <mark>'{{ i }}',</mark>
+                        {%else%}
+                            '{{ i }}',
+                        {%endif%}
+                    {%endfor%}
+                    ]
+                </li>
+                    {%if positions[l] != None%}
+                        <p>"{{ words[l] }}" was found at position: {{ positions[l] }}</p>
+                    {%else%}
+                        <p>"{{ words[l] }}" was not found in the top {{ depth }} results</p>	
+                    {%endif%}
+                {%endfor%}
+            </ol>
+        </div>
+    </body>
 </html>
