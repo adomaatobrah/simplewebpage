@@ -3,6 +3,8 @@ import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 app = Flask(__name__)
+# https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')

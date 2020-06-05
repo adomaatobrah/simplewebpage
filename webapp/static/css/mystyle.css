@@ -1,55 +1,35 @@
 .center {
-    margin: auto;
-    max-width: 800px;
-    border: 3px solid black;
-    padding: 10px;
+  margin: auto;
+  max-width: 800px;
+  border: 3px solid black;
+  padding: 10px;
 }
 
 .results {
-    margin: auto;
-    max-width: 800px;
-    padding: 10px;
+  margin: auto;
+  max-width: 800px;
+  padding: 10px;
 }  
 
 .tooltip {
-    position: relative;
-    display: inline-block;
+  position: relative;
+  display: inline-block;
 }
 
 .tooltip .tooltiptext {
-    visibility: hidden;
-    display: none;
-    width: 120px;
-    background-color: black;
-    color: #fff;
-    text-align: center;
-    padding: 5px 0;
-    border-radius: 6px;
-   
-    position: absolute;
-    z-index: 1;
-  }
+  visibility: hidden;
+  width: 150px;
+  background-color: gray;
+  color: #fff;
+  text-align: left;
+  padding: 5px 0;
+  border-radius: 6px;
+  font-size: 66.67%;
 
-  .tooltip:hover .tooltiptext {
-    visibility: visible;
-    display: block;
-  }
+  position: absolute;
+  z-index: 1;
+}
 
-  .dropdown {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: #f9f9f9;
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    padding: 12px 16px;
-    z-index: 1;
-  }
-  
-  .dropdown:hover .dropdown-content {
-    display: block;
-  }
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}

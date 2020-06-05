@@ -1,8 +1,8 @@
 <html> 
 <head>
-    <!--link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}"-->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
     <!--script src = "{{url_for('static', filename='js/script.js') }}"></script-->
-    <style>
+    <!--style>
         .center {
             margin: auto;
             max-width: 800px;
@@ -23,12 +23,13 @@
 
         .tooltip .tooltiptext {
             visibility: hidden;
-            width: 120px;
-            background-color: black;
+            width: 150px;
+            background-color: gray;
             color: #fff;
-            text-align: center;
+            text-align: left;
             padding: 5px 0;
             border-radius: 6px;
+            font-size: 66.67%;
         
             position: absolute;
             z-index: 1;
@@ -37,7 +38,7 @@
         .tooltip:hover .tooltiptext {
             visibility: visible;
         }
-    </style>
+    </style>-->
 </head>
     <body>
         <div class="center">
@@ -61,20 +62,20 @@
                     {{currentWord}}
                     {%if index != 0%}
                         <div id="{{ index }}" class="tooltiptext">
-                            [
+                            <ol>
                             {%for i in predictions[index - 1]%}
                                 {%if positions[index - 1] == predictions[index - 1].index(i)%}
-                                    <mark>'{{ i }}',</mark>
+                                    <li><mark>'{{ i }}'</mark></li>
                                 {%else%}
-                                    '{{ i }}',
+                                    <li>'{{ i }}'</li>
                                 {%endif%}
                             {%endfor%}
-                            ]
-                            {%if positions[index - 1] != None%}
+                            <!-- {%if positions[index - 1] != None%}
                                 <p>"{{ currentWord }}" was found at position: {{ positions[index - 1] }}</p>
                             {%else%}
                                 <p>"{{ currentWord }}" was not found in the top {{ depth }} results</p>	
-                            {%endif%}
+                            {%endif%} -->
+                            </ol>
                         </div>
                     {%endif%}
                 </mark>
