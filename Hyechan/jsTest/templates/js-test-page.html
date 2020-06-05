@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="{{ url_for('static', filename='js/jsTestScript.js') }}"></script>
+</head>
+<body>
+    <div id="{{idNum}}" onmouseover="showPopUp(this.id)" onmouseout="closePopUp(this.id)">
+        Here is a paragraph.
+        <div id="popup{{idNum}}" style="display: none">
+            Here is some descriptive text
+        </div>
+    </div>
+    <div id="{{idNum + 1}}" onmouseover="showPopUp(this.id)" onmouseout="closePopUp(this.id)">
+        Here is another paragraph.
+        <div id="popup{{idNum + 1}}" style="display: none">
+            Here is some descriptive text
+        </div>
+    </div>
+</body>
+</html>
