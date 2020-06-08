@@ -1,0 +1,35 @@
+.center {
+  margin: auto;
+  max-width: 800px;
+  border: 3px solid black;
+  padding: 10px;
+}
+
+.results {
+  margin: auto;
+  max-width: 800px;
+  padding: 10px;
+}  
+
+/* .tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 150px;
+  background-color: gray;
+  color: #fff;
+  text-align: left;
+  padding: 5px 0;
+  border-radius: 6px;
+  font-size: 66.67%;
+
+  position: absolute;
+  z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+} */
