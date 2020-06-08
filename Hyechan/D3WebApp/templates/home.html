@@ -1,0 +1,56 @@
+<html> 
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
+    <!--script src = "{{url_for('static', filename='js/script.js') }}"></script-->
+</head>
+    <body>
+        <div class="center">
+            <h2 style = "text-align:center">Input text to find out how easily a computer could predict it</h2>
+            <form action="/result" style = "text-align:center", method="POST">
+                Text: <input type='text' name='text'><br><br>
+                Predictions per word: <input type='text' name='number'><br><br>
+                <input type='submit' value='Continue'>
+            </form>
+        </div><br>
+
+        <div class="results">
+            <strong>Your input:</strong>  <br>
+            
+            {%for item in inputs%}
+                {%set currentWord, color = item%}
+                {%set index = inputs.index(item)%}
+                
+                <mark class="tooltip" style="background-color: {{ color }}; font-size:150%;">
+                    <!--onmouseover="showPopUp({{ index }})" onmouseout="closePopUp({{ index }})"-->
+                    {{currentWord}}
+                    {%if index != 0%}
+                        <div id="{{ index }}" class="tooltiptext">
+                            <ol>
+                            {%for i in predictions[index - 1]%}
+                                {%if positions[index - 1] == predictions[index - 1].index(i)%}
+                                    <li><mark>'{{ i }}'</mark></li>
+                                {%else%}
+                                    <li>'{{ i }}'</li>
+                                {%endif%}
+                            {%endfor%}
+                            <!-- {%if positions[index - 1] != None%}
+                                <p>"{{ currentWord }}" was found at position: {{ positions[index - 1] }}</p>
+                            {%else%}
+                                <p>"{{ currentWord }}" was not found in the top {{ depth }} results</p>	
+                            {%endif%} -->
+                            </ol>
+                        </div>
+                    {%endif%}
+                </mark>
+            {%endfor%}
+            <br><br>
+            <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
+            <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
+            <span style="background-color:red;">Somewhat unpredictable</span> (appeared in the first 1000 predictions)<br>
+            <span style="background-color:magenta;">Unexpected</span> (didn't appear in the first 1000 predictions)<br><br>
+
+            <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
+
+        </div>
+    </body>
+</html>
