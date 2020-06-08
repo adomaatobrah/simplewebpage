@@ -1,11 +1,7 @@
-function showPopUp(index) {
-    if (index != 0) {
-        document.getElementById(index).style.display = 'block';
-    }
-}
+var tooltiptext = d3.select("#1")
+    .style("position", "absolute")
+    .style("visibility", "hidden"); 
 
-function closePopUp(index) {
-    if (index != 0) {
-        document.getElementById(index).style.display = 'none';
-    }
-}
+d3.select("#tooltip1")
+    .on("mouseover", function(){return tooltiptext.style("visibility", "visible");})
+    .on("mouseout", function(){return tooltiptext.style("visibility", "hidden");});

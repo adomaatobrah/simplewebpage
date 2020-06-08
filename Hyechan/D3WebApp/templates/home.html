@@ -1,7 +1,7 @@
 <html> 
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
-    <!--script src = "{{url_for('static', filename='js/script.js') }}"></script-->
+    <script src = "{{url_for('static', filename='js/d3.js') }}"></script>
 </head>
     <body>
         <div class="center">
@@ -20,11 +20,10 @@
                 {%set currentWord, color = item%}
                 {%set index = inputs.index(item)%}
                 
-                <mark class="tooltip" style="background-color: {{ color }}; font-size:150%;">
-                    <!--onmouseover="showPopUp({{ index }})" onmouseout="closePopUp({{ index }})"-->
+                <mark id="tooltip{{index}}" style="background-color: {{ color }}; font-size:150%;">
                     {{currentWord}}
                     {%if index != 0%}
-                        <div id="{{ index }}" class="tooltiptext">
+                        <div id="{{index}}" style="visibility: hidden;">
                             <ol>
                             {%for i in predictions[index - 1]%}
                                 {%if positions[index - 1] == predictions[index - 1].index(i)%}
@@ -33,11 +32,6 @@
                                     <li>'{{ i }}'</li>
                                 {%endif%}
                             {%endfor%}
-                            <!-- {%if positions[index - 1] != None%}
-                                <p>"{{ currentWord }}" was found at position: {{ positions[index - 1] }}</p>
-                            {%else%}
-                                <p>"{{ currentWord }}" was not found in the top {{ depth }} results</p>	
-                            {%endif%} -->
                             </ol>
                         </div>
                     {%endif%}
@@ -52,5 +46,16 @@
             <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
 
         </div>
+        <!-- <script src = "{{url_for('static', filename='js/script.js') }}"></script> -->
+        <script>
+            var tooltiptext = d3.select("#1")
+            .append("div")
+                .style("position", "absolute")
+                .style("visibility", "hidden"); 
+
+            d3.select("#tooltip1")
+                .on("mouseover", function(){return tooltiptext.style("visibility", "visible");})
+                .on("mouseout", function(){return tooltiptext.style("visibility", "hidden");});
+        </script>
     </body>
 </html>
