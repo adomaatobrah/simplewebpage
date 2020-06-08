@@ -11,7 +11,7 @@
   padding: 10px;
 }  
 
-/* .tooltip {
+.tooltip {
   position: relative;
   display: inline-block;
 }
@@ -30,6 +30,6 @@
   z-index: 1;
 }
 
-.tooltip:hover .tooltiptext {
+/* .tooltip:hover .tooltiptext {
   visibility: visible;
 } */

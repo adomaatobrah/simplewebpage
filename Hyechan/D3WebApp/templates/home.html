@@ -1,4 +1,5 @@
-<html> 
+<html>
+<meta charset="utf-8"> 
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
     <script src = "{{url_for('static', filename='js/d3.js') }}"></script>
@@ -20,10 +21,10 @@
                 {%set currentWord, color = item%}
                 {%set index = inputs.index(item)%}
                 
-                <mark id="tooltip{{index}}" style="background-color: {{ color }}; font-size:150%;">
+                <mark id="tooltip{{index}}" class="tooltip" style="background-color: {{ color }}; font-size:150%;">
                     {{currentWord}}
                     {%if index != 0%}
-                        <div id="{{index}}" style="visibility: hidden;">
+                        <div id="{{index}}" class="tooltiptext">
                             <ol>
                             {%for i in predictions[index - 1]%}
                                 {%if positions[index - 1] == predictions[index - 1].index(i)%}
@@ -33,6 +34,13 @@
                                 {%endif%}
                             {%endfor%}
                             </ol>
+                            <script type="text/javascript">
+                                var tooltiptext{{index}} = d3.select("#{{index}}");
+
+                                d3.select("#tooltip{{index}}")
+                                    .on("mouseover", function(){return tooltiptext{{index}}.style("visibility", "visible");})
+                                    .on("mouseout", function(){return tooltiptext{{index}}.style("visibility", "hidden");});
+                            </script>
                         </div>
                     {%endif%}
                 </mark>
@@ -46,16 +54,5 @@
             <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
 
         </div>
-        <!-- <script src = "{{url_for('static', filename='js/script.js') }}"></script> -->
-        <script>
-            var tooltiptext = d3.select("#1")
-            .append("div")
-                .style("position", "absolute")
-                .style("visibility", "hidden"); 
-
-            d3.select("#tooltip1")
-                .on("mouseover", function(){return tooltiptext.style("visibility", "visible");})
-                .on("mouseout", function(){return tooltiptext.style("visibility", "hidden");});
-        </script>
     </body>
 </html>
