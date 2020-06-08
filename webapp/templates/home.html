@@ -5,10 +5,12 @@
 </head>
     <body>
         <div class="center">
-            <h2 style = "text-align:center">Input text to find out how easily a computer could predict it</h2>
+            <h2 style = "text-align:center">Text predictability</h2>
             <form action="/result" style = "text-align:center", method="POST">
-                Text: <input type='text' name='text'><br><br>
-                Predictions per word: <input type='text' name='number'><br><br>
+                <label for="usertext">Enter any text </label>
+                <textarea id = "usertext" name='text'></textarea><br><br>
+                <label for = "num">Predictions per word</label>
+                <input type='text' name='number'><br><br>
                 <input type='submit' value='Continue'>
             </form>
         </div><br>
