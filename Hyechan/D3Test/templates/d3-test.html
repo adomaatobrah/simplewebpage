@@ -5,8 +5,12 @@
     </head>
     <body>
         <div id="myDiv">
-
+            Hello!
+            {%for i in range(0, 10)%}
+                <script>
+                    d3.select("#myDiv").append("div").text("{{i}}");
+                </script>
+            {%endfor%}
         </div>
-        <script src="{{ url_for('static', filename='js/d3TestScript.js') }}"></script>
     </body>
 </html>
