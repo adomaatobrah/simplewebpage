@@ -12,10 +12,10 @@ function hideTooltip(myID) {
 
 function generate(inputList, predictionList, positionList, searchDepth) {
     for (i = 0; i < inputList.length; i++) {
-        let currentWord = inputList[i][0];
+        let currentWord = inputList[i][0].replace(" ", "\u00a0");
         let color = inputList[i][1];
         let wordPos = i;
-    
+        
         d3.select(".results")
             .append("mark")
                 .attr("id", "tooltip" + wordPos)
@@ -39,12 +39,12 @@ function generate(inputList, predictionList, positionList, searchDepth) {
                     d3.select("#list" + wordPos)
                         .append("li")
                             .append("mark")
-                                .text(predictionList[wordPos - 1][j])
+                                .text(predictionList[wordPos - 1][j].replace(" ", "\u00a0"))
                 }
                 else {
                     d3.select("#list" + wordPos)
                         .append("li")
-                            .text(predictionList[wordPos - 1][j])
+                            .text(predictionList[wordPos - 1][j].replace(" ", "\u00a0"))
                 }
             }
         }
