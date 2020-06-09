@@ -1,5 +1,11 @@
-var tooltiptext = d3.select("#1")
+function showTooltip(myID) {
+    d3.select("#" + myID)
+        .selectAll("div")
+            .style("visibility", "visible");
+}
 
-d3.select("#tooltip1")
-    .on("mouseover", function(){return tooltiptext.style("visibility", "visible");})
-    .on("mouseout", function(){return tooltiptext.style("visibility", "hidden");});
+function hideTooltip(myID) {
+    d3.select("#" + myID)
+        .selectAll("div")
+            .style("visibility", "hidden");
+}
