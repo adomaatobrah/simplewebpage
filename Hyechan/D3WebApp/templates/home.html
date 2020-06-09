@@ -18,6 +18,16 @@
         <div class="results">
             <strong>Your input:</strong>  <br>
             <script>
+                (await fetch("https://dev0.kenarnold.org/result?text=Input+text+to+find+out+how+easily+a+computer+could+predict+it&number=5", {
+                    "credentials": "omit",
+                    "headers": {
+                        "Upgrade-Insecure-Requests": "1",
+                        "Pragma": "no-cache",
+                        "Cache-Control": "no-cache"
+                    },
+                    "method": "GET",
+                    "mode": "cors"
+                })).json();
                 let inputList = [["Me", "white"], [" You", "lime"], [" Hello", "lime"]];
                 let predictionList = [[",", " You", " this"], [" Hello", " World", " Me"]];
                 let positionsList = [1, 0];
