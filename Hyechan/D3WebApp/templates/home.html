@@ -1,7 +1,9 @@
-<html> 
+<html>
+<meta charset="utf-8"> 
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
-    <!--script src = "{{url_for('static', filename='js/script.js') }}"></script-->
+    <script src="{{url_for('static', filename='js/d3.js') }}"></script>
+    <script src="{{url_for('static', filename='js/script.js') }}"></script>
 </head>
     <body>
         <div class="center">
@@ -15,34 +17,24 @@
 
         <div class="results">
             <strong>Your input:</strong>  <br>
-            
-            {%for item in inputs%}
-                {%set currentWord, color = item%}
-                {%set index = inputs.index(item)%}
-                
-                <mark class="tooltip" style="background-color: {{ color }}; font-size:150%;">
-                    <!--onmouseover="showPopUp({{ index }})" onmouseout="closePopUp({{ index }})"-->
-                    {{currentWord}}
-                    {%if index != 0%}
-                        <div id="{{ index }}" class="tooltiptext">
-                            <ol>
-                            {%for i in predictions[index - 1]%}
-                                {%if positions[index - 1] == predictions[index - 1].index(i)%}
-                                    <li><mark>'{{ i }}'</mark></li>
-                                {%else%}
-                                    <li>'{{ i }}'</li>
-                                {%endif%}
-                            {%endfor%}
-                            <!-- {%if positions[index - 1] != None%}
-                                <p>"{{ currentWord }}" was found at position: {{ positions[index - 1] }}</p>
-                            {%else%}
-                                <p>"{{ currentWord }}" was not found in the top {{ depth }} results</p>	
-                            {%endif%} -->
-                            </ol>
-                        </div>
-                    {%endif%}
-                </mark>
-            {%endfor%}
+            <script>
+                (await fetch("https://dev0.kenarnold.org/result?text=Input+text+to+find+out+how+easily+a+computer+could+predict+it&number=5", {
+                    "credentials": "omit",
+                    "headers": {
+                        "Upgrade-Insecure-Requests": "1",
+                        "Pragma": "no-cache",
+                        "Cache-Control": "no-cache"
+                    },
+                    "method": "GET",
+                    "mode": "cors"
+                })).json();
+                let inputList = [["Me", "white"], [" You", "lime"], [" Hello", "lime"]];
+                let predictionList = [[",", " You", " this"], [" Hello", " World", " Me"]];
+                let positionsList = [1, 0];
+                let searchDepth = 3;
+
+                generate(inputList, predictionList, positionsList, searchDepth);
+            </script>
             <br><br>
             <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
             <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>

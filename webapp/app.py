@@ -1,9 +1,17 @@
 from flask import Flask, render_template, request, url_for
+from flask_cors import CORS
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
+import logging
+logging.basicConfig(level=logging.INFO)
+# logging.getLogger('flask_cors').level = logging.DEBUG
+
 app = Flask(__name__)
-# https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
+# Allow cross-origin requests on all routes (https://flask-cors.readthedocs.io/en/latest/)
+CORS(app)
+
+# Disable template cache: https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
@@ -98,12 +106,12 @@ def result():
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
                              
-    return render_template('home.html',
-                           prompt = prompt_text,
-                           final_score = score / (num_input_words - 1),
-                           depth = num_results,
-                           predictions = predictions,
-                           len = len(predictions),
-                           inputs = inputlist,
-                           positions = poslist,
-                           words = wordlist)
+    return {
+                           'prompt': prompt_text,
+                           'final_score': score / (num_input_words - 1),
+                           'depth': num_results,
+                           'predictions': predictions,
+                           'inputs': inputlist,
+                           'positions': poslist,
+                           'words': wordlist
+    }

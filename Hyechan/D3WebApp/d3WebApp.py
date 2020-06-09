@@ -1,8 +1,14 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, jsonify
+import json
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
+CORS(app)
+
 # https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
@@ -33,7 +39,7 @@ def result():
     score = 0
     next_pos = 1
 
-    inputlist = [(tokenizer.decode(encoded_prompt[0, 0].item()), "white")]
+    inputlist = [(tokenizer.decode(encoded_prompt[0, 0].item()), 'white')]
     predictions = []
     poslist = []
     wordlist = []
@@ -81,29 +87,27 @@ def result():
 
             # The below section is for color-coding the input
             if listpos < 10:
-                inputlist.append((tokenizer.decode(next_word.item()), "lime"))
+                inputlist.append((tokenizer.decode(next_word.item()), 'lime'))
             elif listpos < 100:
-                inputlist.append((tokenizer.decode(next_word.item()), "yellow"))
+                inputlist.append((tokenizer.decode(next_word.item()), 'yellow'))
             elif listpos < 1000:
-                inputlist.append((tokenizer.decode(next_word.item()), "red"))
+                inputlist.append((tokenizer.decode(next_word.item()), 'red'))
             else:
-                inputlist.append((tokenizer.decode(next_word.item()), "magenta"))
+                inputlist.append((tokenizer.decode(next_word.item()), 'magenta'))
         # else (the word is not in the topk results) append a None position
         #   and color it magenta (not found)
         else:
             poslist.append(None)
-            inputlist.append((tokenizer.decode(next_word.item()), "magenta"))
+            inputlist.append((tokenizer.decode(next_word.item()), 'magenta'))
 
         # append the next word to a "word list" for display purposes
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
                              
-    return render_template('home.html',
-                           prompt = prompt_text,
-                           final_score = score / (num_input_words - 1),
-                           depth = num_results,
-                           predictions = predictions,
-                           len = len(predictions),
-                           inputs = inputlist,
-                           positions = poslist,
-                           words = wordlist)
+    return {
+        'final_score': score / (num_input_words - 1),
+        'depth': num_results,
+        'predictions': predictions,
+        'inputs': inputlist,
+        'positions': poslist
+    }
