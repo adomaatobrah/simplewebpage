@@ -1,9 +1,17 @@
 from flask import Flask, render_template, request, url_for
+from flask_cors import CORS
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
+import logging
+logging.basicConfig(level=logging.INFO)
+# logging.getLogger('flask_cors').level = logging.DEBUG
+
 app = Flask(__name__)
-# https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
+# Allow cross-origin requests on all routes (https://flask-cors.readthedocs.io/en/latest/)
+CORS(app)
+
+# Disable template cache: https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
