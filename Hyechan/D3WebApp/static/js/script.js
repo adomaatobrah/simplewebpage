@@ -10,10 +10,19 @@ function hideTooltip(myID) {
         .style("visibility", "hidden");
 }
 
-function changeWord(myID) {
-    d3.select("#" + myID)
-    .selectAll("text")
-        .text("Changed!");
+function changeWord(pos, text) {
+    d3.select("#tooltip" + pos + " > text")
+    .text(text);
+}
+
+function bold(elem) {
+    d3.select(elem)
+    .style("font-weight", "bold")
+}
+
+function unbold(elem) {
+    d3.select(elem)
+    .style("font-weight", "normal")
 }
 
 function generate(data) {
@@ -44,7 +53,6 @@ function generate(data) {
             .style("font-size", "150%")
             .on("mouseover", function(){showTooltip(this.id);})
             .on("mouseout", function(){hideTooltip(this.id);})
-            .on("click", function(){changeWord(this.id)})
             .append("text")
                 .text(currentWord);
         
@@ -58,15 +66,25 @@ function generate(data) {
             
             for (j = 0; j < searchDepth; j++) {
                 if (j == positionList[wordPos - 1]) {
+                    let word = predictionList[wordPos - 1][j].replace(" ", "\u00a0")
                     d3.select("#list" + wordPos)
                     .append("li")
+                        .on("click", function(){changeWord(wordPos, word)})
+                        .on("mouseover", function(){bold(this);})
+                        .on("mouseout", function(){unbold(this);})
                         .append("mark")
-                            .text(predictionList[wordPos - 1][j].replace(" ", "\u00a0"))
+                            .append("text")
+                                .text(word)
                 }
                 else {
+                    let word = predictionList[wordPos - 1][j].replace(" ", "\u00a0")
                     d3.select("#list" + wordPos)
                     .append("li")
-                        .text(predictionList[wordPos - 1][j].replace(" ", "\u00a0"))
+                        .on("click", function(){changeWord(wordPos, word)})
+                        .on("mouseover", function(){bold(this);})
+                        .on("mouseout", function(){unbold(this);})
+                        .append("text")
+                            .text(word)
                 }
             }
         }
