@@ -8,7 +8,7 @@ model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Create some prompt text with appropriate tags
-prompt_text = input("Please input something: ")
+prompt_text = input("Please input something (2 sentences max): ")
 # List of punctuation to determine where segments end
 punc_list = [".", "?", "!"]
 # Prepend the [CLS] tag
@@ -17,6 +17,7 @@ prompt_text = "[CLS] " + prompt_text
 for i in range(0, len(prompt_text)):
     if prompt_text[i] in punc_list:
         prompt_text = prompt_text[:i + 1] + " [SEP]" + prompt_text[i + 1:]
+        
 # Tokenize the text so the model can understand it
 tokenized_text = tokenizer.tokenize(prompt_text)
 # Assign segment ids
@@ -32,7 +33,7 @@ print(tokenized_text)
 print(segments_ids)
 
 # Mask one of the words (so that BERT has to guess what it is)
-masked_word = input("What word do you want to [MASK]? ")
+masked_word = input("What token do you want to [MASK]? ")
 masked_word.lower()
 # List to hold indices of masked words
 mask_indices = []
