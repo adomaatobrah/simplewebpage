@@ -9,31 +9,21 @@
         <div class="center">
             <h1 style = "text-align:center">D3 Version</h1>
             <h2 style = "text-align:center">Input text to find out how easily a computer could predict it</h2>
-            <form action="/result" style = "text-align:center", method="POST">
-                Text: <input type='text' name='text'><br><br>
-                Predictions per word: <input type='text' name='number'><br><br>
-                <input type='submit' value='Continue'>
-            </form>
+            <div style = "text-align:center">
+                Text: <input type='text' id='text'><br><br>
+                Predictions per word: <input type='text' id='number'><br><br>
+                <button id='submit' onclick='getData();'>Continue</button>
+            </div>
         </div><br>
 
-        <div class="results">
-            <strong>Your input:</strong>  <br>
-            <script>
-                let inputList = {{inputs|safe}};
-                let predictionList = {{predictions|safe}};
-                let positionsList =  {{positions|safe}};
-                let searchDepth = {{depth}};
-
-                generate(inputList, predictionList, positionsList, searchDepth);
-            </script>
-            <br><br>
+        <div class="key">
             <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
             <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
             <span style="background-color:red;">Somewhat unpredictable</span> (appeared in the first 1000 predictions)<br>
             <span style="background-color:magenta;">Unexpected</span> (didn't appear in the first 1000 predictions)<br><br>
+        </div>
 
-            <strong>The predictability score for the top {{ depth }} results is: </strong>{{ final_score }}<br><br>
-
+        <div class="results">
         </div>
     </body>
 </html>

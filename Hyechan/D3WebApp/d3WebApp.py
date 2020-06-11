@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, url_for, jsonify
+from flask import Flask, render_template, request, url_for, jsonify, make_response
+from flask_cors import CORS
 import json
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
@@ -7,6 +8,7 @@ app = Flask(__name__)
 
 # https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+CORS(app)
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
@@ -16,12 +18,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def form():
     return render_template("home.html", len = 0)
 
-@app.route('/result', methods=["POST"])
+@app.route('/', methods=["POST"])
 def result():
+    # Get the json data from fetch()
+    data = request.get_json()
+
     # Get the user input
-    prompt_text = request.form['text']
+    prompt_text = data['text']
     # Get the search depth (a.k.a. number of results per word)
-    num_results = int(request.form['number'])
+    num_results = int(data['num'])
 
     # encode prompt and generate predictions
     encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
@@ -99,10 +104,13 @@ def result():
         # append the next word to a "word list" for display purposes
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
-                             
-    return render_template("home.html",
-                        final_score = score / (num_input_words - 1),
-                        depth = num_results,
-                        predictions = json.dumps(predictions),
-                        inputs = json.dumps(inputlist),
-                        positions = json.dumps(poslist))
+
+    res = make_response(json.dumps({
+        'final_score': score / (num_input_words - 1),
+        'depth': num_results,
+        'predictions': predictions,
+        'inputs': inputlist,
+        'positions': poslist,
+    }), 200)
+
+    return res
