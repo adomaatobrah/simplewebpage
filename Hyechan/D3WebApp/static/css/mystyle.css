@@ -5,7 +5,7 @@
   padding: 10px;
 }
 
-.results {
+.key {
   margin: auto;
   max-width: 800px;
   padding: 10px;
@@ -16,7 +16,7 @@
   display: inline-block;
 }
 
-.tooltip .tooltiptext {
+.tooltiptext {
   visibility: hidden;
   width: 150px;
   background-color: gray;
@@ -30,6 +30,8 @@
   z-index: 1;
 }
 
-/* .tooltip:hover .tooltiptext {
-  visibility: visible;
-} */
+.results {
+  margin: auto;
+  max-width: 800px;
+  padding: 10px;
+}
