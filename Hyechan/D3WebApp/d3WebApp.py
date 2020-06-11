@@ -3,11 +3,7 @@ import json
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
-import logging
-logging.basicConfig(level=logging.INFO)
-
 app = Flask(__name__)
-CORS(app)
 
 # https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -104,10 +100,9 @@ def result():
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
                              
-    return {
-        'final_score': score / (num_input_words - 1),
-        'depth': num_results,
-        'predictions': predictions,
-        'inputs': inputlist,
-        'positions': poslist
-    }
+    return render_template("home.html",
+                        final_score = score / (num_input_words - 1),
+                        depth = num_results,
+                        predictions = json.dumps(predictions),
+                        inputs = json.dumps(inputlist),
+                        positions = json.dumps(poslist))
