@@ -1,18 +1,26 @@
 <template>
   <div id="app">
     <h2>Text predictability</h2>
-    <form action="/result" method="POST>
+    <div class="form-group">
       <label for="usertext">Enter any text </label>
-      <textarea id = "usertext" name='text'></textarea><br><br>
-      <label for = "num">Predictions per word</label>
-      <input type='text' name='number'><br><br>
-      <input type='submit' value='Continue'>
-    </form>
+      <textarea 
+        id = "usertext" 
+        name='text'
+        v-model="input.text">
+      </textarea><br><br>
+      <label for = "num">Predictions per word </label>
+      <input 
+        type='text' 
+        name='number'
+        v-model="input.num"><br><br>
+      <button @click="submit()">continue</button>
+    </div>
     <div class="results">
+      <br>
       Your input:
       <span class="tooltip" v-for="(word, ind) in inputdata.inputs" 
       v-bind:style="{ 'background-color': word[1] }">
-       {{ word[0] }}
+       {{ word[0] }} 
         <div v-if="ind != 0" id=ind class="tooltiptext">
           <ol>
             <li v-for="i in inputdata.predictions[ind-1]">
@@ -32,33 +40,28 @@
 </template>
 
 <script>
-import ToDo from './components/todo.vue';
 
 export default {
   data() {
     return {
-      greeting: 'Hello',
-      inputdata: {"depth":5,
-                  "final_score":0.6,
-                  "inputs":[["It","white"],
-                            [" is","lime"],
-                            [" nice","red"],
-                            [" to","lime"],
-                            [" meet","lime"],
-                            [" you","lime"]],
-                  "len":5,
-                  "positions":[0,null,0,null,0],
-                  "predictions":[[" is","'s",",","."," was"],
-                                [" not"," a"," important"," also"," the"],
-                                [" to"," that"," and"," if",","],
-                                [" see"," have"," know"," be"," hear"],
-                                [" you"," with"," people"," a"," the"]],
-                  "prompt":"It is nice to meet you",
-                  "words":[" is"," nice"," to"," meet"," you"]}
+      inputdata: {},
+      input: {
+        text: '',
+        num: 0,
+      },
     };
   },
-  components: {
-    ToDo,
+
+
+  methods: {
+   async submit(){
+     var url = new URL("http://localhost:5000/result"),
+     params = {text:this.input.text, number:this.input.num}
+     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+     const res = await fetch(url);
+     const input = await res.json();
+     this.inputdata = input;
+   },
   },
 };
 </script>
