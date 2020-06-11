@@ -1,13 +1,19 @@
 function showTooltip(myID) {
     d3.select("#" + myID)
-        .selectAll("div")
-            .style("visibility", "visible");
+    .selectAll("div")
+        .style("visibility", "visible");
 }
 
 function hideTooltip(myID) {
     d3.select("#" + myID)
-        .selectAll("div")
-            .style("visibility", "hidden");
+    .selectAll("div")
+        .style("visibility", "hidden");
+}
+
+function changeWord(myID) {
+    d3.select("#" + myID)
+    .selectAll("text")
+        .text("Changed!");
 }
 
 function generate(data) {
@@ -36,9 +42,11 @@ function generate(data) {
             .attr("class", "tooltip")
             .style("background-color", color)
             .style("font-size", "150%")
-            .text(currentWord)
             .on("mouseover", function(){showTooltip(this.id);})
-            .on("mouseout", function(){hideTooltip(this.id);});
+            .on("mouseout", function(){hideTooltip(this.id);})
+            .on("click", function(){changeWord(this.id)})
+            .append("text")
+                .text(currentWord);
         
         if (wordPos != 0) {
             d3.select("#tooltip" + wordPos)

@@ -16,7 +16,7 @@
   display: inline-block;
 }
 
-.tooltip .tooltiptext {
+.tooltiptext {
   visibility: hidden;
   width: 150px;
   background-color: gray;
