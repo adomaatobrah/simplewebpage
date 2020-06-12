@@ -114,8 +114,7 @@ def form():
 def result():
     # Get the json data from fetch()
     data = request.get_json()
+    print(data)
 
     # Create a response by passing data to calcPredictability
-    res = make_response(json.dumps(calcPredictability(data)), 200)
-
-    return res
+    return calcPredictability(data)

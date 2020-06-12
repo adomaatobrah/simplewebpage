@@ -1,3 +1,7 @@
+/* Global vars */
+var userInput = ""
+var userNum = 0
+
 /* showTooltip reveals a tooltip attached to an element
  * Parameters: myID, the ID of the element with a tooltip
  * Postcondition: the tooltip attached to that element
@@ -28,7 +32,7 @@ function hideTooltip(myID) {
  * Postcondition: the word at pos is altered to text, and its
  *      background color is updated according to rank
  */
-function changeWord(pos, text, rank) {
+async function changeWord(pos, origWord, text, rank) {
     d3.select("#tooltip" + pos + " > text").text(text);
     var wordToChange = d3.select("#tooltip" + pos);
     if (rank < 10) {
@@ -43,6 +47,32 @@ function changeWord(pos, text, rank) {
     else {
         wordToChange.style("background-color", "magenta");
     }
+
+    userInput = userInput.replace(/ /g, "\u00a0");
+    userInput = userInput.replace(origWord, text);
+    userInput = userInput.replace(/\u00a0/g, " ");
+
+    var entry = {
+        text: userInput,
+        num: userNum
+    };
+
+    // Send the code to Flask
+    let response = await fetch("http://127.0.0.1:5000/", {
+        method: "POST",
+        mode: "cors",
+        body: JSON.stringify(entry),
+        cache: "no-cache",
+        headers: new Headers({
+            "content-type": "application/json"
+        })
+    });
+
+    // Get the data back from flask
+    let data = await response.json()
+
+    // Generate the color-coded text with that data
+    generate(data);
 }
 
 /* Makes an element's font bold
@@ -135,7 +165,7 @@ function generate(data) {
                     // Append a list item that is highlighted
                     d3.select("#list" + wordPos)
                     .append("li")
-                        .on("click", function(){changeWord(wordPos, word, num)})
+                        .on("click", function(){changeWord(wordPos, currentWord, word, num)})
                         .on("mouseover", function(){bold(this);})
                         .on("mouseout", function(){unbold(this);})
                         .append("mark")
@@ -146,7 +176,7 @@ function generate(data) {
                     // Append a list item that is not highlighted
                     d3.select("#list" + wordPos)
                     .append("li")
-                        .on("click", function(){changeWord(wordPos, word, num)})
+                        .on("click", function(){changeWord(wordPos, currentWord, word, num)})
                         .on("mouseover", function(){bold(this);})
                         .on("mouseout", function(){unbold(this);})
                         .append("text")
@@ -174,14 +204,19 @@ function generate(data) {
 
 // Receive data from user input fields
 async function getData() {
-    var text = document.getElementById("text");
-    var num = document.getElementById("number");
+    // Get the data from user input
+    let text = document.getElementById("text");
+    let num = document.getElementById("number");
 
     var entry = {
         text: text.value,
         num: num.value
     };
 
+    userInput = text.value;
+    userNum = num.value;
+
+    // Send the code to Flask
     let response = await fetch("http://127.0.0.1:5000/", {
         method: "POST",
         mode: "cors",
@@ -192,7 +227,9 @@ async function getData() {
         })
     });
 
+    // Get the data back from flask
     let data = await response.json()
 
+    // Generate the color-coded text with that data
     generate(data);
 }
