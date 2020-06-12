@@ -15,30 +15,6 @@ tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# @app.route('/')
-# def form():
-#     return render_template("home.html", len = 0)
-
-@app.route('/gettext', methods=['GET'])
-def get_text():
-    return jsonify({"depth":5,
-                  "final_score":0.6,
-                  "inputs":[["It","white"],
-                            [" is","lime"],
-                            [" nice","red"],
-                            [" to","lime"],
-                            [" meet","lime"],
-                            [" you","lime"]],
-                  "len":5,
-                  "positions":[0,None,0,None,0],
-                  "predictions":[[" is","'s",",","."," was"],
-                                [" not"," a"," important"," also"," the"],
-                                [" to"," that"," and"," if",","],
-                                [" see"," have"," know"," be"," hear"],
-                                [" you"," with"," people"," a"," the"]],
-                  "prompt":"It is nice to meet you",
-                  "words":[" is"," nice"," to"," meet"," you"]})
-
 @app.route('/result', methods=['GET'])
 def result():
     # Get the user input
@@ -61,7 +37,7 @@ def result():
     inputlist = [(tokenizer.decode(encoded_prompt[0, 0].item()), "white")]
     predictions = []
     poslist = []
-    wordlist = []
+    wordlist = [(tokenizer.decode(encoded_prompt[0, 0].item()))]
 
     # for each word of the sentence
     for word in prediction_scores[0]:
@@ -82,7 +58,7 @@ def result():
         # for each index in predicted words, append to the lists
         for index in predicted_words:
             predicted_words_list.append(index.item())
-            results.append(tokenizer.decode(index.item()))
+            results.append(tokenizer.decode(index.item()).lstrip())
 
         # append the necessary amount of results to the predictions
         #   2-d array, for displaying in html
@@ -106,13 +82,13 @@ def result():
 
             # The below section is for color-coding the input
             if listpos < 10:
-                inputlist.append((tokenizer.decode(next_word.item()), "lime"))
+                inputlist.append((tokenizer.decode(next_word.item()).lstrip(), "lime"))
             elif listpos < 100:
-                inputlist.append((tokenizer.decode(next_word.item()), "yellow"))
+                inputlist.append((tokenizer.decode(next_word.item()).lstrip(), "yellow"))
             elif listpos < 1000:
-                inputlist.append((tokenizer.decode(next_word.item()), "red"))
+                inputlist.append((tokenizer.decode(next_word.item()).lstrip(), "red"))
             else:
-                inputlist.append((tokenizer.decode(next_word.item()), "magenta"))
+                inputlist.append((tokenizer.decode(next_word.item().lstrip()), "magenta"))
         # else (the word is not in the topk results) append a None position
         #   and color it magenta (not found)
         else:
@@ -122,10 +98,13 @@ def result():
         # append the next word to a "word list" for display purposes
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
-                             
+    if num_input_words > 1:
+        score = score / (num_input_words - 1)  
+    else:
+        score = 0                        
     return jsonify({
                            "prompt": prompt_text,
-                           "final_score": score / (num_input_words - 1),
+                           "final_score": score,
                            "depth": num_results,
                            "predictions": predictions,
                            "len": len(predictions),

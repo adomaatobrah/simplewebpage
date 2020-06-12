@@ -1,6 +1,8 @@
 <template>
   <div id="app">
     <h2>Text predictability</h2>
+    <br>
+    <h2>{{msg}}</h2>
     <div class="form-group">
       <label for="usertext">Enter any text </label>
       <textarea 
@@ -18,24 +20,26 @@
     <div class="results">
       <br>
       Your input:
-      <span class="tooltip" v-for="(word, ind) in inputdata.inputs" 
-      v-bind:style="{ 'background-color': word[1] }">
-       {{ word[0] }} 
+      <h3>
+      <span class="tooltip keep-spaces" v-for="(word, ind) in inputdata.inputs" 
+       v-bind:style="{ 'background-color': word[1] }">{{word[0]}}
         <div v-if="ind != 0" id=ind class="tooltiptext">
           <ol>
-            <li v-for="i in inputdata.predictions[ind-1]">
-              <mark>
+            <li v-for="(i in inputdata.predictions[ind-1]">
+              <button @click="recalculate(i, ind)">
                 '{{i}}'
-              </mark>
+              </button>
             </li>
           </ol>
         </div>
-      </span><br><br>
+      </span>
+      </h3>
+      <br><br>
        <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
        <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
        <span style="background-color:red;">Somewhat unpredictable</span> (appeared in the first 1000 predictions)<br>
        <span style="background-color:magenta;">Unexpected</span> (didn't appear in the first 1000 predictions)<br><br>
-    </div>
+      </div>
   </div>
 </template>
 
@@ -44,25 +48,55 @@
 export default {
   data() {
     return {
-      inputdata: {},
+      inputdata: {"depth":0,
+                  "final_score":0,
+                  "inputs":[[],],
+                  "len":0,
+                  "positions":[],
+                  "predictions":[[]],
+                  "prompt":"",
+                  "words":[]},
       input: {
         text: '',
-        num: 0,
+        num: 5,
       },
+      msg: ''
     };
   },
 
 
   methods: {
    async submit(){
-     var url = new URL("http://localhost:5000/result"),
+    var url = new URL("http://localhost:5000/result"),
      params = {text:this.input.text, number:this.input.num}
      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
      const res = await fetch(url);
      const input = await res.json();
      this.inputdata = input;
-   },
-  },
+     this.msg = this.inputdata.words;
+    },
+
+    async recalculate(changedword, index){
+    //  var inputarray = this.inputdata.prompt.split(" ");
+    //  inputarray[index] = changedword;
+    //  var newinputstr = inputarray.join(' ');
+
+     this.$set(this.inputdata.words, index, ' '.concat(changedword));
+     var newinputstr = this.inputdata.words.join('');
+      
+    // this.msg = this.inputdata.words;
+    this.msg = newinputstr;
+
+
+     var url = new URL("http://localhost:5000/result"),
+     params = {text:newinputstr, number:this.input.num}
+     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+     const res = await fetch(url);
+     const input = await res.json();
+     this.inputdata = input;
+
+    }
+  }
 };
 </script>
 
@@ -77,6 +111,8 @@ export default {
 }
 .results {
   text-align: left;
+  margin-left: 20%;
+  margin-right: 20%
 }
 
 .tooltip {
@@ -101,4 +137,6 @@ export default {
 .tooltip:hover .tooltiptext {
   visibility: visible;
 }
+
+.keep-spaces { white-space: pre-wrap; }
 </style>
