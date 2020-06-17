@@ -14,15 +14,7 @@ tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-@app.route('/')
-def form():
-    return render_template("home.html", len = 0)
-
-@app.route('/', methods=["POST"])
-def result():
-    # Get the json data from fetch()
-    data = request.get_json()
-
+def calcPredictability(data):
     # Get the user input
     prompt_text = data['text']
     # Get the search depth (a.k.a. number of results per word)
@@ -104,13 +96,25 @@ def result():
         # append the next word to a "word list" for display purposes
         wordlist.append(tokenizer.decode(next_word.item()))
         next_pos += 1
-
-    res = make_response(json.dumps({
+    
+    # return a dictionary containing all necessary data
+    return {
         'final_score': score / (num_input_words - 1),
         'depth': num_results,
         'predictions': predictions,
         'inputs': inputlist,
         'positions': poslist,
-    }), 200)
+    }
 
-    return res
+@app.route('/')
+def form():
+    return render_template("home.html", len = 0)
+
+@app.route('/', methods=["POST"])
+def result():
+    # Get the json data from fetch()
+    data = request.get_json()
+    print(data)
+
+    # Create a response by passing data to calcPredictability
+    return calcPredictability(data)
