@@ -1,8 +1,7 @@
 <template>
   <div id="app">
     <h2>Text predictability</h2>
-    <br>
-    <h2>{{msg}}</h2>
+    <h2></h2>
     <div class="form-group">
       <label for="usertext">Enter any text </label>
       <textarea 
@@ -20,9 +19,10 @@
     <div class="results">
       <br>
       Your input:
-      <h3>
+      <p style="font-size: 18px;">
       <span class="tooltip keep-spaces" v-for="(word, ind) in inputdata.inputs" 
-       v-bind:style="{ 'background-color': word[1] }">{{word[0]}}
+       v-bind:style="{ 'background-color': word[1] }">
+       {{word[0]}}
         <div v-if="ind != 0" id=ind class="tooltiptext">
           <ol>
             <li v-for="(i in inputdata.predictions[ind-1]">
@@ -33,7 +33,7 @@
           </ol>
         </div>
       </span>
-      </h3>
+    </p>
       <br><br>
        <span style="background-color:lime;">Expected</span> (appeared in the first 10 predictions)<br>
        <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 100 predictions)<br>
@@ -55,7 +55,8 @@ export default {
                   "positions":[],
                   "predictions":[[]],
                   "prompt":"",
-                  "words":[]},
+                  "words":[]
+                },
       input: {
         text: '',
         num: 5,
@@ -73,20 +74,12 @@ export default {
      const res = await fetch(url);
      const input = await res.json();
      this.inputdata = input;
-     this.msg = this.inputdata.words;
     },
 
     async recalculate(changedword, index){
-    //  var inputarray = this.inputdata.prompt.split(" ");
-    //  inputarray[index] = changedword;
-    //  var newinputstr = inputarray.join(' ');
-
      this.$set(this.inputdata.words, index, ' '.concat(changedword));
      var newinputstr = this.inputdata.words.join('');
-      
-    // this.msg = this.inputdata.words;
-    this.msg = newinputstr;
-
+     this.msg = newinputstr;
 
      var url = new URL("http://localhost:5000/result"),
      params = {text:newinputstr, number:this.input.num}
@@ -94,7 +87,6 @@ export default {
      const res = await fetch(url);
      const input = await res.json();
      this.inputdata = input;
-
     }
   }
 };
@@ -138,5 +130,7 @@ export default {
   visibility: visible;
 }
 
-.keep-spaces { white-space: pre-wrap; }
+.keep-spaces { 
+  white-space: pre-wrap; 
+}
 </style>
