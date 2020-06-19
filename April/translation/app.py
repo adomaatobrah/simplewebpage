@@ -26,42 +26,49 @@ def result():
     input_ids = tokenizer.encode("translate English to German: " + english, return_tensors="pt")
     output_ids = tokenizer.encode(german, return_tensors='pt')
 
-
     outputs1 = model.generate(input_ids, max_length=40, num_beams=4, early_stopping=True)
     machine_translation = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in outputs1]
 
-    lm_labels = tokenizer.encode(german, return_tensors='pt')
-    outputs = model(input_ids=input_ids, lm_labels=lm_labels)
+    outputs = model(input_ids=input_ids, lm_labels=output_ids)
 
     loss, prediction_scores = outputs[:2]
 
     all_predictions = []
     next_pos = 0
+    colors = []
+    decoded_words = []
 
     for word in prediction_scores[0]:
-        predicted_words = word.topk(1000).indices
+        predicted_words = word.topk(10).indices
+
         next_word = output_ids[0, next_pos]
+        decoded_word = tokenizer.convert_ids_to_tokens(next_word.item()).replace('\u2581', '\u00a0')
+        decoded_words.append(decoded_word)
+        
         encoded_predictions = []
         decoded_predictions = []
-        colors = ()
 
         for index in predicted_words:
-            decoded_predictions.append(tokenizer.decode(index.item()))
+            decoded_predictions.append(tokenizer.convert_ids_to_tokens(index.item()).replace('\u2581', '\u00a0'))
             encoded_predictions.append(index.item())
         if next_word in predicted_words:
-            listpos = encoded_predictions.index(next_word)          
+            listpos = encoded_predictions.index(next_word)
+            
+            print(decoded_word)      
             if listpos == 0:
-                colors = (tokenizer.decode(next_word.item()), "lime")
-            elif listpos <= 10:
-                colors = (tokenizer.decode(next_word.item()), "yellow")
+                colors.append("lime")
             else:
-                colors = (tokenizer.decode(next_word.item()), "magenta")
+                colors.append("yellow")
+        else:
+            colors.append("red")
 
-        all_predictions.append((colors, decoded_predictions[0:5]))
+        all_predictions.append(decoded_predictions[0:5])
         next_pos += 1
     return jsonify({
                     "translation": machine_translation[0],
-                    "predictions": all_predictions
+                    "predictions": all_predictions,
+                    "colors": colors,
+                    "decoded_words": decoded_words
                     })
 
 if __name__ == '__main__':

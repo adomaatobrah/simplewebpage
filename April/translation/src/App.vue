@@ -5,13 +5,15 @@
       <textarea 
         id = "userenglish" 
         name='text'
-        v-model="input.english">
+        v-model="input.english"
+        rows="4" cols="50">
       </textarea><br><br>
       <label for="usergerman">Enter German text </label>
       <textarea 
         id = "usergerman" 
         name='text'
-        v-model="input.german">
+        v-model="input.german"
+        rows="4" cols="50">
       </textarea><br><br>
       <button @click="submit()">continue</button>
     </div>
@@ -19,12 +21,12 @@
       <br>
       Your translation:
       <p style="font-size: 30px;">
-      <span class="tooltip keep-spaces" v-for="(word, ind) in inputdata.predictions" 
-       v-bind:style="{ 'background-color': word[0][1] }">{{word[0][0]}}
+      <span class="tooltip" v-for="(word, ind) in inputdata.decoded_words" 
+       v-bind:style="{ 'background-color': inputdata.colors[ind] }">{{word}}
         <div id=ind class="tooltiptext">
           <ol>
-            <li v-for="(i in word[1]">
-              <button>
+            <li v-for="(i in inputdata.predictions[ind]">
+              <button @click="recalculate(i, ind)">
                 '{{i}}'
               </button>
             </li>
@@ -36,7 +38,12 @@
       <p style="font-size: 30px;">
         {{ inputdata.translation }}
         <br><br>
+        {{ msg }}
       </p>
+      <br>
+      <span style="background-color:lime;">Expected</span> (top prediction)<br>
+       <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 10 predictions)<br>
+       <span style="background-color:red;">Somewhat unpredictable</span> (didn't appear in the first 10 predictions)<br>
    </div>
   </div>
 </template>
@@ -51,7 +58,9 @@ export default {
         german: '',
       },
       inputdata: {"translation": '',
-                  "predictions": []
+                  "predictions": [],
+                  "colors": [],
+                  "decoded_words": []
                 },
       msg: ''
     };
@@ -67,6 +76,23 @@ export default {
      const input = await res.json();
      this.inputdata = input;
     },
+    async recalculate(changedword, index){
+     this.$set(this.inputdata.decoded_words, index, changedword);
+     var newinputstr = this.inputdata.decoded_words.join('').replace(/\u00a0/g, ' ');
+     this.msg=newinputstr;
+
+     var url = new URL("http://localhost:5000/result"),
+     params = {english:this.input.english, german:newinputstr}
+     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+     const res = await fetch(url);
+     const input = await res.json();
+     this.inputdata = input;
+     this.input = {
+       english: this.input.english,
+       german: newinputstr,
+     };
+
+    }
   }
 };
 </script>
