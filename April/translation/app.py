@@ -21,40 +21,49 @@ def result():
     english = request.args.get('english')
     german = request.args.get('german')
 
-    words = []
-
+    #encode english input with prefix
     input_ids = tokenizer.encode("translate English to German: " + english, return_tensors="pt")
+    #encode user's german translation
     output_ids = tokenizer.encode(german, return_tensors='pt')
 
+    #generate and decode machine translation of english input
     outputs1 = model.generate(input_ids, max_length=40, num_beams=4, early_stopping=True)
     machine_translation = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in outputs1]
 
+    #I don't really understand this part to be honest, but it has to do with generating predictions
     outputs = model(input_ids=input_ids, lm_labels=output_ids)
-
     loss, prediction_scores = outputs[:2]
 
     all_predictions = []
     next_pos = 0
     colors = []
-    decoded_words = []
+    decoded_tokens = []
 
-    for word in prediction_scores[0]:
-        predicted_words = word.topk(10).indices
+    #loop through encoded lists of predictions
+    for tok in prediction_scores[0]:
 
-        next_word = output_ids[0, next_pos]
-        decoded_word = tokenizer.convert_ids_to_tokens(next_word.item()).replace('\u2581', '\u00a0')
-        decoded_words.append(decoded_word)
-        
+        #list of top 10 predictions for each token
+        predicted_tokens = tok.topk(10).indices
+
+        #current input token
+        next_token = output_ids[0, next_pos]
+
+        #decode current token and add to list
+        decoded_token = tokenizer.convert_ids_to_tokens(next_token.item()).replace('\u2581', '\u00a0')
+        decoded_tokens.append(decoded_token)
+
         encoded_predictions = []
         decoded_predictions = []
 
-        for index in predicted_words:
+        #loop through each prediction for the current token
+        for index in predicted_tokens:
+            #convert ids to tokens to maintain word breaks; convert word break character to a space
             decoded_predictions.append(tokenizer.convert_ids_to_tokens(index.item()).replace('\u2581', '\u00a0'))
             encoded_predictions.append(index.item())
-        if next_word in predicted_words:
-            listpos = encoded_predictions.index(next_word)
-            
-            print(decoded_word)      
+
+        #determine highlight color for each prediction
+        if next_token in predicted_tokens:
+            listpos = encoded_predictions.index(next_token)      
             if listpos == 0:
                 colors.append("lime")
             else:
@@ -62,14 +71,45 @@ def result():
         else:
             colors.append("red")
 
-        all_predictions.append(decoded_predictions[0:5])
+        #list of lists each containing top 10 predictions
+        all_predictions.append(decoded_predictions[0:10])
         next_pos += 1
     return jsonify({
                     "translation": machine_translation[0],
                     "predictions": all_predictions,
                     "colors": colors,
-                    "decoded_words": decoded_words
+                    "decoded_tokens": decoded_tokens
                     })
+
+@app.route('/wholesentence', methods=['GET'])
+def wholesentence():
+    english = request.args.get('english')
+    firstword = request.args.get('german')
+    german = firstword + " fill fill fill fill fill fill fill fill"
+
+    input_ids = tokenizer.encode("translate English to German: " + english, return_tensors="pt")
+    
+    output_ids = tokenizer.encode(german, return_tensors='pt')
+    
+    outputs1 = model.generate(input_ids, max_length=40, num_beams=4, early_stopping=True)
+    machine_translation = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in outputs1]
+
+
+    for x in range (1, 9):
+        outputs = model(input_ids=input_ids, lm_labels=output_ids)
+
+        loss, prediction_scores = outputs[:2]
+
+        second_choice = prediction_scores[0][x].topk(1).indices[0]
+        output_ids[0][x] = second_choice
+
+    final = tokenizer.decode(output_ids[0])
+
+    return jsonify({"translation": final,
+                    "expected" : machine_translation[0]
+    })
+
+
 
 if __name__ == '__main__':
     app.run()
