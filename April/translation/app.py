@@ -84,26 +84,31 @@ def result():
 @app.route('/wholesentence', methods=['GET'])
 def wholesentence():
     english = request.args.get('english')
-    firstword = request.args.get('german')
-    german = firstword + " fill fill fill fill fill fill fill fill"
+    german = request.args.get('german')
+
+    first_token = tokenizer.encode(german, return_tensors="pt")[0][0].item()
 
     input_ids = tokenizer.encode("translate English to German: " + english, return_tensors="pt")
-    
-    output_ids = tokenizer.encode(german, return_tensors='pt')
-    
+    english_encoded = model.encoder(input_ids = input_ids)
+
     outputs1 = model.generate(input_ids, max_length=40, num_beams=4, early_stopping=True)
     machine_translation = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in outputs1]
 
+    output_ids = tokenizer.encode(german, return_tensors='pt')
+    partial_decode = torch.LongTensor([0, first_token])
 
-    for x in range (1, 9):
-        outputs = model(input_ids=input_ids, lm_labels=output_ids)
+    next_token_to_add = torch.tensor(1)
+        
+    while next_token_to_add.item() != 5:
+        next_word_logits = model.forward(
+        encoder_outputs=english_encoded, 
+        decoder_input_ids=partial_decode.unsqueeze(0)
+        )[0]
+        
+        next_token_to_add = next_word_logits[0, -1].topk(5).indices[0]
+        partial_decode = torch.cat((partial_decode, next_token_to_add.unsqueeze(0)), 0)
 
-        loss, prediction_scores = outputs[:2]
-
-        second_choice = prediction_scores[0][x].topk(1).indices[0]
-        output_ids[0][x] = second_choice
-
-    final = tokenizer.decode(output_ids[0])
+    final = tokenizer.decode(partial_decode)
 
     return jsonify({"translation": final,
                     "expected" : machine_translation[0]
