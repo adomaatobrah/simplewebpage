@@ -7,14 +7,17 @@
         name='text'
         v-model="input.english"
         rows="4" cols="50">
+        It was a dark and stormy night.
       </textarea><br><br>
+  
       <br> 
       <label for="firstword">Beginning of translation</label><br>
       <textarea 
         id = "firstword" 
         name='text'
         v-model="input.firstword"
-        rows="4" cols="50">
+        rows="4" cols="50"
+        value="La">
       </textarea><br><br>
       <button @click="wholesentence(input.english, input.firstword)">continue</button>
   </div>
@@ -27,16 +30,23 @@
       <br>
       Your translation:
       <p style="font-size: 30px;">
-        {{ wholeTranslation.translation }}
+      <span class="tooltip" v-for="(word, ind) in wholeTranslation.tokens">
+        {{ word }}
+        <div id=ind class="tooltiptext">
+          <ol>
+            <li v-for="(i in wholeTranslation.predictions[ind]">
+              <button @click="recalculate(i, ind)">
+                '{{i}}'
+              </button>
+            </li>
+          </ol>
+        </div>
+      </span>
     </p>
       English:
       <p style="font-size: 30px;">
         {{ wholeTranslation.newEnglish }}
       </p>
-      
-      <br>
-     
-
    </div>
   </div>
 </template>
@@ -50,15 +60,13 @@ export default {
         english: '',
         firstword: '',
       },
-      inputdata: {"translation": '',
-                  "predictions": [],
-                  "colors": [],
-                  "decoded_tokens": []
-                },
+      paraphrases: [],
       msg: '',
       wholeTranslation: {"translation": '',
                          "expected": '',
-                         "newEnglish": ''},
+                         "newEnglish": '',
+                         "tokens": [],
+                         "predictions" : []},
     };
   },
 
@@ -69,9 +77,15 @@ export default {
      params = {english:english, spanish:spanish}
      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
      const res = await fetch(url);
-
      const input = await res.json();
      this.wholeTranslation = input;
+    
+    },
+    async recalculate(changedword, index){
+     this.$set(this.wholeTranslation.tokens, index, changedword);
+     var thelist = this.wholeTranslation.tokens.slice(0, index+1);
+     var newinputstr = thelist.join('').replace(/\u00a0/g, ' ');
+     this.wholesentence(this.input.english, newinputstr)
     
     }
   }

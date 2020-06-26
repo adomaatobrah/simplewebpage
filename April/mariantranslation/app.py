@@ -46,6 +46,8 @@ def result():
     next_token_to_add = torch.tensor(1)
     x = 0
 
+    prediction_list = []
+
     while next_token_to_add.item() != 0 and x < 100:
         model_inputs = model.prepare_inputs_for_generation(
         partial_decode, past=past, attention_mask=batch['attention_mask'], use_cache=model.config.use_cache
@@ -60,13 +62,17 @@ def result():
             next_token_to_add = prefix[x]
         else:
             next_token_to_add = next_token_logits[0].argmax()
+        decoded_predictions = []
+        for tok in next_token_logits[0].topk(5).indices:
+            decoded_predictions.append(tokenizer.convert_ids_to_tokens(tok.item()).replace('\u2581', '\u00a0'))
         
-        if next_token_to_add.item() == 25: 
-            break
+        prediction_list.append(decoded_predictions)
+
         partial_decode = torch.cat((partial_decode, next_token_to_add.unsqueeze(0).unsqueeze(0)), -1)
         x+= 1
 
-    decoded_tokens = tokenizer.convert_ids_to_tokens(partial_decode[0])
+    decoded_tokens = [sub.replace('\u2581', '\u00a0') for sub in tokenizer.convert_ids_to_tokens(partial_decode[0])]
+    decoded_tokens.remove("<pad>")
     final = tokenizer.decode(partial_decode[0]).split("<pad>")[1]
 
     batch2 = ROMANCE_en_tokenizer.prepare_translation_batch([">>en<< " + final])
@@ -75,7 +81,9 @@ def result():
 
     return jsonify({"translation": final,
                     "expected" : machine_translation,
-                    "newEnglish" : new_english
+                    "newEnglish" : new_english,
+                    "tokens" : decoded_tokens,
+                    "predictions" : prediction_list
                 })
 
 if __name__ == '__main__':
