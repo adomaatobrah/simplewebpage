@@ -23,8 +23,6 @@ ROMANCE_en = MarianMTModel.from_pretrained(ROMANCE_en_model_name)
 def result():
     tokenizer = en_ROMANCE_tokenizer
     model = en_ROMANCE
-    #tokenizer = ROMANCE_en_tokenizer
-    #model = ROMANCE_en
 
     english = request.args.get('english')
     spanish = request.args.get('spanish')
@@ -63,7 +61,7 @@ def result():
         else:
             next_token_to_add = next_token_logits[0].argmax()
         decoded_predictions = []
-        for tok in next_token_logits[0].topk(5).indices:
+        for tok in next_token_logits[0].topk(10).indices:
             decoded_predictions.append(tokenizer.convert_ids_to_tokens(tok.item()).replace('\u2581', '\u00a0'))
         
         prediction_list.append(decoded_predictions)
