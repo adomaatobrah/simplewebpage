@@ -11,7 +11,6 @@
         v-on:keyup="sParaphrases = [], eParaphrases = []">
         It was a dark and stormy night.
       </textarea><br><br>
-  
       <br> 
       <br>
       <label for="firstword">Beginning of translation</label><br>
@@ -21,19 +20,29 @@
         v-model="input.firstword"
         rows="4" cols="50"
         value="La"
-        :disabled = checked>
+        :disabled = defaulttrans>
       </textarea><br>
-      <input type="checkbox" id="checkbox" v-model="checked">
+      <input type="checkbox" id="default-checkbox" v-model="defaulttrans">
       <label for="checkbox">Use default translation</label><br><br>
+      <input type="checkbox" id="auto-checkbox" v-model="auto">
+      <label for="checkbox">Show auto-generated rewordings</label><br><br>
       <button @click="wholesentence(input.english, input.firstword)">continue</button>
   </div>
  
-    <div class="results">
-      Expected translation:
-      <p style="font-size: 25px;">
+    <div v-if="!isHidden" class="results">
+      Expected translation:<br><br>
+      <button @click="auto = false; wholesentence(input.english, wholeTranslation.expected)" style="font-size: 25px;" class = "plain">
         {{ wholeTranslation.expected }}
+      </button><br><br>
+      Generated translation(s):<br>
+      <p v-for="(alt, ind) in wholeTranslation.alternatives" class="tooltip">
+        <button @click="auto = false; wholesentence(input.english, alt)" style="font-size: 25px;" class = "plain">
+          {{ alt }}<br>
+          <div class="tooltiptext" style="width: 90%">
+            {{ wholeTranslation.engAlternatives[ind] }}
+          </div>
+        </button>
       </p>
-      Your translation:
       <p style="font-size: 25px;">
       <span class="tooltip" v-for="(word, ind) in wholeTranslation.tokens">
         {{ word }}
@@ -48,7 +57,7 @@
         </div>
       </span>
     </p>
-      English:
+      English back translation:
       <p style="font-size: 25px;">
         {{ wholeTranslation.newEnglish }}
       </p>
@@ -57,7 +66,7 @@
         <div class="grid-item">
           <p style="text-align:center">Spanish</p>
         <p v-for="paraphrase in sParaphrases">
-          <button @click="wholesentence(input.english, paraphrase)" class="para">
+          <button @click="auto=false; wholesentence(input.english, paraphrase)" class="plain">
             {{ paraphrase }}
           </button>
         </p>
@@ -65,13 +74,12 @@
         <div class="grid-item">
           <p style="text-align:center">English</p>
         <p v-for="paraphrase in eParaphrases">
-         <button class="para">
+         <button class="plain">
           {{ paraphrase }}
          </button>
         </p>
       </div>
       </div>
-
    </div>
   </div>
 </template>
@@ -80,8 +88,6 @@
 export default {
   data() {
     return {
-      tab1: "true",
-      tab2: "false",
       input: {
         english: '',
         firstword: '',
@@ -89,33 +95,45 @@ export default {
       sParaphrases: [],
       eParaphrases: [],
       msg: '',
-      checked: false,
+      defaulttrans: false,
+      auto: false,
+      isHidden: true,
       wholeTranslation: {"translation": '',
                          "expected": '',
                          "newEnglish": '',
                          "tokens": [],
-                         "predictions" : []},
+                         "predictions" : [],
+                         "alternatives" : [],
+                         "engAlternatives" : [],
+                          }
     };
   },
 
   methods: {
     async wholesentence(english, spanish){
-     var url = new URL("http://localhost:5000/result"),
-     params = {english:english, spanish:spanish}
-     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
-     const res = await fetch(url);
-     const input = await res.json();
-     this.wholeTranslation = input;
-     this.sParaphrases.unshift(this.wholeTranslation.translation)
-     this.eParaphrases.unshift(this.wholeTranslation.newEnglish)
+     if (this.auto){
+       var url = new URL("http://localhost:5000/auto");
+        }
+     else{
+      var url = new URL("http://localhost:5000/result")
+      }
+    var params = {english:english, spanish:spanish}
+    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+    const res = await fetch(url);
+    const input = await res.json();
+    this.wholeTranslation = input;
+    this.sParaphrases.unshift(this.wholeTranslation.translation);
+    this.eParaphrases.unshift(this.wholeTranslation.newEnglish);
+    this.isHidden = false;
     },
     async recalculate(changedword, index){
      this.$set(this.wholeTranslation.tokens, index, changedword);
      var thelist = this.wholeTranslation.tokens.slice(0, index+1);
      var newinputstr = thelist.join('').replace(/\u00a0/g, ' ');
      this.wholesentence(this.input.english, newinputstr)
+    },
     }
-  }
+  
 };
 </script>
 
@@ -152,9 +170,9 @@ export default {
 }
 .tooltip:hover .tooltiptext { visibility: visible;}
 
-button.para { background:none; border:none; text-align: left;}
+button.plain { background:none; border:none; text-align: left;}
 
-button.para:hover { cursor: pointer;}
+button.plain:hover { cursor: pointer;}
 
 .grid-container {
   display: grid;
