@@ -134,5 +134,6 @@ dmypy.json
 # Hyechan's clutter
 Hyechan/fineTuningTest/data_speaking_verbs/
 Hyechan/fineTuningTest/data_wnut_17/
-Hyechan/fineTuningTest/speakVerbsTestModel/
+Hyechan/fineTuningTest/models/
+Hyechan/fineTuningTest/runs/
 Hyechan/transformers/
