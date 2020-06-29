@@ -15,14 +15,25 @@
         v-model="input.german"
         rows="4" cols="50">
       </textarea><br><br>
-      <button @click="submit()">continue</button>
+      <button @click="submit(input.english, input.german)">continue</button>
+      <br> or
+      <label for="firstword">First word of translation</label>
+      <textarea 
+        id = "firstword" 
+        name='text'
+        v-model="input.firstword"
+        rows="4" cols="50">
+      </textarea><br><br>
+      <button @click="wholesentence(input.english, input.firstword)">continue</button>
     </div>
     <div class="results">
       <br>
       Your translation:
       <p style="font-size: 30px;">
-      <span class="tooltip" v-for="(word, ind) in inputdata.decoded_words" 
-       v-bind:style="{ 'background-color': inputdata.colors[ind] }">{{word}}
+        {{ wholeTranslation.translation }}
+      <span class="tooltip" v-for="(word, ind) in inputdata.decoded_tokens" 
+       v-bind:style="{ 'background-color': inputdata.colors[ind] }">
+       {{word}}
         <div id=ind class="tooltiptext">
           <ol>
             <li v-for="(i in inputdata.predictions[ind]">
@@ -37,9 +48,10 @@
       Expected translation:
       <p style="font-size: 30px;">
         {{ inputdata.translation }}
+        {{ wholeTranslation.expected }}
         <br><br>
-        {{ msg }}
       </p>
+      
       <br>
       <span style="background-color:lime;">Expected</span> (top prediction)<br>
        <span style="background-color:yellow;">Somewhat predictable</span> (appeared in the first 10 predictions)<br>
@@ -56,42 +68,45 @@ export default {
       input: {
         english: '',
         german: '',
+        firstword: '',
       },
       inputdata: {"translation": '',
                   "predictions": [],
                   "colors": [],
-                  "decoded_words": []
+                  "decoded_tokens": []
                 },
-      msg: ''
+      msg: '',
+      wholeTranslation: {"translation": '',
+                         "expected": ''},
     };
   },
 
 
   methods: {
-   async submit(){
+   async submit(english, german){
     var url = new URL("http://localhost:5000/result"),
-     params = {english:this.input.english, german:this.input.german}
+     params = {english:english, german:german}
      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
      const res = await fetch(url);
      const input = await res.json();
      this.inputdata = input;
     },
     async recalculate(changedword, index){
-     this.$set(this.inputdata.decoded_words, index, changedword);
-     var newinputstr = this.inputdata.decoded_words.join('').replace(/\u00a0/g, ' ');
+     this.$set(this.inputdata.decoded_tokens, index, changedword);
+     var newinputstr = this.inputdata.decoded_tokens.join('').replace(/\u00a0/g, ' ');
      this.msg=newinputstr;
 
-     var url = new URL("http://localhost:5000/result"),
-     params = {english:this.input.english, german:newinputstr}
+     this.submit(this.input.english, newinputstr)
+    },
+    async wholesentence(english, german){
+     var url = new URL("http://localhost:5000/wholesentence"),
+     params = {english:english, german:german}
      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
      const res = await fetch(url);
-     const input = await res.json();
-     this.inputdata = input;
-     this.input = {
-       english: this.input.english,
-       german: newinputstr,
-     };
 
+     const input = await res.json();
+     this.wholeTranslation = input;
+    
     }
   }
 };
