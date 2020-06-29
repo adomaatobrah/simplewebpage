@@ -2,7 +2,7 @@
     "data_dir": "./data_speaking_verbs",
     "labels": "./data_speaking_verbs/labels.txt",
     "model_name_or_path": "bert-large-cased",
-    "output_dir": "speakVerbsTestModel",
+    "output_dir": "./models/speakVerbsTestModel30300",
     "max_seq_length": 128,
     "num_train_epochs": 300,
     "per_device_train_batch_size": 16,
