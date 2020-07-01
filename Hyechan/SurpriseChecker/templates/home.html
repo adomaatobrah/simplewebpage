@@ -1,28 +1,20 @@
 <html>
 <meta charset="utf-8"> 
 <head>
-    <script src="./d3.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
+    <script src="{{url_for('static', filename='js/d3.js') }}"></script>
+    <script src="{{url_for('static', filename='js/script.js') }}"></script>
 </head>
     <body>
-        <div id="txt">
-            <span>This is a test of the </span>
-            <span id="mc">_______
-                <div style="
-                    z-index: 10;
-                    visibility: hidden;
-                    position: absolute;
-                    width: 150px;
-                    background-color: gray;
-                    color: #fff;
-                    text-align: left;
-                    padding: 5px 0;
-                    border-radius: 6px;
-                ">
-                    Test
-                </div>
-            </span>
-            <span> process.</span>
+        <div class="center">
+            <div style="text-align:center;">
+                Text: <input type='text' id='text'><br><br>
+                Masked Word: <input type='text' id='mask'><br><br>
+                <button id='submit' style="width:200px;height:100px" onclick='getData();'>Press me!</button>
+            </div>
         </div>
-        <script src="./script.js"></script>
+        
+        <div class="results">
+        </div>
     </body>
 </html>
