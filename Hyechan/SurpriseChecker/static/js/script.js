@@ -1,7 +1,3 @@
-d3.select("#mc")
-    .on("mouseover", function(){showDropdown(this.id);})
-    .on("mouseout", function(){hideDropdown(this.id);})
-
 function showDropdown(myID) {
     d3.select("#" + myID)
     .selectAll("div")
@@ -15,6 +11,14 @@ function hideDropdown(myID) {
 }
 
 function basicDisplay(data) {
+    let preds = data.predictions;
+
+    for (i = 0; i < preds[0].length; i++) {
+        d3.select("#list1")
+        .append("li")
+            .text(preds[0][i]);
+    }
+
     d3.select(".results")
     .append("div")
         .text("The model got: " + data.model_score)
@@ -22,6 +26,38 @@ function basicDisplay(data) {
     d3.select(".results")
     .append("div")
         .text("Wordfreq got: " + data.wordfreq_score)
+}
+
+function generateFITB(data) {
+    let text = data.text;
+    let mask_word = data.mask;
+    textArr = text.split(mask_word);
+
+    d3.select(".results")
+    .text("")
+
+    d3.select(".results")
+    .append("span")
+        .text(textArr[0])
+
+    d3.select(".results")
+    .append("span")
+        .attr("id", "blank")
+        .on("mouseover", function(){showDropdown(this.id);})
+        .on("mouseout", function(){hideDropdown(this.id);})
+        .text("__________")
+        .append("div")
+        .attr("class", "tooltiptext")
+        .append("ol")
+            .attr("id", "list1");
+    
+    d3.select(".results")
+    .append("span")
+        .text(textArr[1])
+
+    d3.select("#list1")
+    .append("li")
+        .text(mask_word);
 }
 
 // Receive data from user input fields
@@ -49,5 +85,6 @@ async function getData() {
     // Get the data back from flask
     let data = await response.json()
 
+    generateFITB(entry)
     basicDisplay(data)
 }

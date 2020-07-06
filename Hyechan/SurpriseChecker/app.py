@@ -38,7 +38,6 @@ def createSegIDs(tokenized_text):
     return seg_ids
 
 def addMask(tokenized_text, mask_word):
-    print(tokenized_text)
     mask_word_tokens = tokenizer.tokenize(mask_word)
     mask_indices = []
     for i in range(0, len(tokenized_text)):
@@ -53,7 +52,6 @@ def compute_model_score(text, word_to_mask):
     tokenized_text = tokenizer.tokenize(prepped_text)
     segment_ids = createSegIDs(tokenized_text)
     masked_text, mask_indices = addMask(tokenized_text, word_to_mask)
-    print(masked_text)
 
     indexed_tokens = tokenizer.convert_tokens_to_ids(masked_text)
     masked_token_id = tokenizer.convert_tokens_to_ids(word_to_mask)
@@ -66,13 +64,15 @@ def compute_model_score(text, word_to_mask):
         prediction_scores = outputs[0]
 
     probs = []
+    preds = []
 
     for i in mask_indices:
         next_token_logits = prediction_scores[0, i, :]
+        preds.append([tokenizer.convert_ids_to_tokens(index.item()) for index in next_token_logits.topk(5).indices])
         prob = torch.softmax(next_token_logits, 0)[masked_token_id]
         probs.append(prob.item())
     
-    return probs
+    return (probs, preds)
 
 def compute_wordfreq_score(masked_word):
     freqs = wordfreq.get_frequency_dict('es')
@@ -87,8 +87,11 @@ def result():
     data = request.get_json()
     text = data["text"]
     word_to_mask = data["mask"]
+
+    score, preds = compute_model_score(text, word_to_mask)
         
     return {
-        'model_score': compute_model_score(text, word_to_mask),
+        'model_score': score,
+        'predictions': preds,
         'wordfreq_score': compute_wordfreq_score(word_to_mask)
     }
