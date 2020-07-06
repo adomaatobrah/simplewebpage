@@ -1,3 +1,6 @@
+let text = ""
+let mask = ""
+
 function showDropdown(myID) {
     d3.select("#" + myID)
     .selectAll("div")
@@ -10,13 +13,41 @@ function hideDropdown(myID) {
         .style("visibility", "hidden");
 }
 
-function basicDisplay(data) {
-    let preds = data.predictions;
+function bold(elem) {
+    d3.select(elem)
+    .style("font-weight", "bold")
+}
 
-    for (i = 0; i < preds[0].length; i++) {
+function unbold(elem) {
+    d3.select(elem)
+    .style("font-weight", "normal")
+}
+
+function checkAnswer(guess) {
+    console.log(guess)
+    console.log(mask)
+    if (guess == mask) {
+        d3.select(".results")
+        .append("div")
+            .text("Correct!")
+    }
+    else {
+        d3.select(".results")
+        .append("div")
+            .text("Incorrect!")
+    }
+}
+
+function basicDisplay(data) {
+    let sentences = data.sentences;
+
+    for (i = 0; i < sentences.length; i++) {
         d3.select("#list1")
         .append("li")
-            .text(preds[0][i]);
+            .text(sentences[i])
+            .on("click", function(){checkAnswer(this.innerHTML);})
+            .on("mouseover", function(){bold(this);})
+            .on("mouseout", function(){unbold(this);});
     }
 
     d3.select(".results")
@@ -28,10 +59,8 @@ function basicDisplay(data) {
         .text("Wordfreq got: " + data.wordfreq_score)
 }
 
-function generateFITB(data) {
-    let text = data.text;
-    let mask_word = data.mask;
-    textArr = text.split(mask_word);
+function generateFITB() {
+    textArr = text.split(mask);
 
     d3.select(".results")
     .text("")
@@ -57,18 +86,23 @@ function generateFITB(data) {
 
     d3.select("#list1")
     .append("li")
-        .text(mask_word);
+        .text(mask)
+        .on("click", function(){checkAnswer(this.innerHTML);})
+        .on("mouseover", function(){bold(this);})
+        .on("mouseout", function(){unbold(this);});
 }
 
 // Receive data from user input fields
 async function getData() {
     // Get the data from user input
-    let text = document.getElementById("text");
-    let mask = document.getElementById("mask");
+    text = document.getElementById("text").value;
+    console.log(text)
+    mask = document.getElementById("mask").value;
+    console.log(mask)
 
     var entry = {
-        text: text.value,
-        mask: mask.value
+        text: text,
+        mask: mask
     };
 
     // Send the code to Flask
@@ -85,6 +119,6 @@ async function getData() {
     // Get the data back from flask
     let data = await response.json()
 
-    generateFITB(entry)
+    generateFITB()
     basicDisplay(data)
 }
