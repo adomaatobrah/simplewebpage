@@ -2,12 +2,13 @@
 <meta charset="utf-8"> 
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mystyle.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="{{url_for('static', filename='js/d3.js') }}"></script>
     <script src="{{url_for('static', filename='js/script.js') }}"></script>
 </head>
     <body>
         <div class="center">
-            <h2 style = "text-align:center">Predicting words given full vs. small context</h2>
+            <h2 style = "text-align:center">Predicting words given full vs. no context</h2>
             <div style = "text-align:center">
                 Text: <input type='text' id='text'><br><br>
                 <button id='submit' onclick='getData();'>Continue</button>
@@ -15,12 +16,12 @@
         </div><br>
 
         <div class="key">
-            <span style="background-color:lime;">Easy</span> This word was easy to predict even with just the immediate context<br>
-            <span style="background-color:yellow;">Medium</span> This word was relatively easy to predict with both full and small context<br>
-            <span style="background-color:red;">Difficult</span> This word was difficult to predict without full context<br>
+            <span style="background-color:lime;">Easier with more context:</span> This word was far easier to predict with context<br>
+            <span style="background-color:red;">More context didn't change much:</span> Adding context did not make this word easier to predict<br>
         </div>
 
         <div class="results">
         </div>
+        <div id="plot"></div>
     </body>
 </html>

@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import torch
 import math
+import wordfreq
 from transformers import BertTokenizer, BertForMaskedLM
 
 app = Flask(__name__)
@@ -48,9 +49,11 @@ def computeLogProb(masked_text, original_text, segment_ids, index):
         outputs = model(tokens_tensor, token_type_ids=segment_tensor)
         next_token_logits = outputs[0][0, index, :]
 
+    preds = [tokenizer.convert_ids_to_tokens(index.item()) for index in next_token_logits.topk(5).indices]
     next_token_logprobs = next_token_logits - next_token_logits.logsumexp(0)
+    logProb = next_token_logprobs[tokenizer.convert_tokens_to_ids(original_text[index])].item()
 
-    return next_token_logprobs[tokenizer.convert_tokens_to_ids(original_text[index])].item()
+    return (preds, logProb)
 
 def bigContext(tokenized_text, segment_ids, index):
     text = tokenized_text.copy()
@@ -64,6 +67,15 @@ def smallContext(tokenized_text, segment_ids, index):
             text[i] = "[MASK]"
     return computeLogProb(text, tokenized_text, segment_ids, index)
 
+def noContext(word):
+    if word in '.?,:!;\'\"‘’“”':
+        return -1 # FIXME
+    freq = wordfreq.word_frequency(word, 'en')
+    if freq == 0:
+        print("word not found:", word)
+        return -100
+    return math.log(freq)
+
 def compute_ratios(input_text):
     prepped_text = prepareInputs(input_text)
     tokenized_text = tokenizer.tokenize(prepped_text)
@@ -73,34 +85,53 @@ def compute_ratios(input_text):
     segment_ids = createSegIDs(tokenized_text)
 
     results = []
-    compoundNumerator = 0
-    compoundDenominator = 0
+    compoundBigPreds = []
+    compoundSmallPreds = []
+    compoundBigLogProb = 0
+    compoundSmallLogProb = 0
     currentWord = ""
 
     for i in range(1, len(tokenized_text) - 1):
+        bigPreds, bigLogProb = bigContext(tokenized_text, segment_ids, i)
+        smallPreds, smallLogProb = smallContext(tokenized_text, segment_ids, i)
+
         if tokenized_text[i + 1].startswith("##"):
-            compoundNumerator += bigContext(tokenized_text, segment_ids, i)
-            compoundDenominator += smallContext(tokenized_text, segment_ids, i)
+            compoundBigLogProb += bigLogProb
+            compoundSmallLogProb += smallLogProb
+            compoundBigPreds = bigPreds
+            compoundSmallPreds = smallPreds
             currentWord += tokenized_text[i]
             continue
-        elif compoundNumerator != 0 or compoundDenominator != 0:
+        elif compoundBigLogProb != 0 or compoundSmallLogProb != 0:
+            compoundBigLogProb += bigLogProb
+            compoundSmallLogProb += smallLogProb
             currentWord += tokenized_text[i]
             currentWord = currentWord.replace("##", "")
         else:
+            compoundBigLogProb = bigLogProb
+            compoundSmallLogProb = smallLogProb
+            compoundBigPreds = bigPreds
+            compoundSmallPreds = smallPreds
             currentWord = tokenized_text[i]
         
-        compoundNumerator = bigContext(tokenized_text, segment_ids, i)
-        compoundDenominator = smallContext(tokenized_text, segment_ids, i)
-        logratio = compoundNumerator - compoundDenominator
+        noContextLogProb = noContext(currentWord)
 
-        if tokenized_text[i + 1] != "[SEP]":
+        if tokenized_text[i + 1] not in "[SEP]":
             currentWord += " "
 
         # High ratio = knowing more words helped prediction a lot
-        results.append([currentWord, compoundNumerator, compoundDenominator, logratio])
+        results.append(dict(
+            word=currentWord,
+            bigContextLogProb=compoundBigLogProb,
+            smallContextLogProb=compoundSmallLogProb,
+            noContextLogProb=noContextLogProb,
+            bigContextPreds = compoundBigPreds,
+            smallContextPreds = compoundSmallPreds))
         
-        compoundNumerator = 0
-        compoundDenominator = 0
+        compoundBigLogProb = 0
+        compoundSmallLogProb = 0
+        compoundBigPreds = []
+        compoundSmallPreds = []
         currentWord = ""
 
     return results
