@@ -20,33 +20,33 @@ def prepareInputs(init_text):
     # List of punctuation to determine where segments end
     punc_list = [".", "?", "!"]
     # Prepend the [CLS] tag
-    prompt_text = "[CLS] " + init_text
-    # Insert the [SEP] tags
-    for i in range(0, len(prompt_text)):
-        if prompt_text[i] in punc_list:
-            prompt_text = prompt_text[:i + 1] + " [SEP]" + prompt_text[i + 1:]
-        elif i == len(prompt_text) - 1 and prompt_text[i] not in punc_list:
-            prompt_text += " [SEP]"
+    prompt_text = "[CLS] " + init_text + " [SEP]"
+    # # Insert the [SEP] tags
+    # for i in range(0, len(prompt_text)):
+    #     if prompt_text[i] in punc_list:
+    #         prompt_text = prompt_text[:i + 1] + " [SEP]" + prompt_text[i + 1:]
+    #     elif i == len(prompt_text) - 1 and prompt_text[i] not in punc_list:
+    #         prompt_text += " [SEP]"
 
     return prompt_text
 
-def createSegIDs(tokenized_text):
-    currentSeg = 0
-    seg_ids = []
-    for token in tokenized_text:
-        seg_ids.append(currentSeg)
-        if token == "[SEP]":
-            currentSeg += 1
+# def createSegIDs(tokenized_text):
+#     currentSeg = 0
+#     seg_ids = []
+#     for token in tokenized_text:
+#         seg_ids.append(currentSeg)
+#         if token == "[SEP]":
+#             currentSeg += 1
 
-    return seg_ids
+#     return seg_ids
 
-def computeLogProb(masked_text, original_text, segment_ids, index):
+def computeLogProb(masked_text, original_text, index):
     indexed_tokens = tokenizer.convert_tokens_to_ids(masked_text)
     tokens_tensor = torch.tensor([indexed_tokens])
-    segment_tensor = torch.tensor([segment_ids])
+    # segment_tensor = torch.tensor([segment_ids])
         
     with torch.no_grad():
-        outputs = model(tokens_tensor, token_type_ids=segment_tensor)
+        outputs = model(tokens_tensor) #, token_type_ids=segment_tensor)
         next_token_logits = outputs[0][0, index, :]
 
     preds = [tokenizer.convert_ids_to_tokens(index.item()) for index in next_token_logits.topk(5).indices]
@@ -55,17 +55,17 @@ def computeLogProb(masked_text, original_text, segment_ids, index):
 
     return (preds, logProb)
 
-def bigContext(tokenized_text, segment_ids, index):
+def bigContext(tokenized_text, index):
     text = tokenized_text.copy()
     text[index] = "[MASK]"
-    return computeLogProb(text, tokenized_text, segment_ids, index)
+    return computeLogProb(text, tokenized_text, index)
 
-def smallContext(tokenized_text, segment_ids, index):
+def smallContext(tokenized_text, index):
     text = tokenized_text.copy()
     for i in range(1, len(text) - 1):
         if i != index - 1 and i != index + 1:
             text[i] = "[MASK]"
-    return computeLogProb(text, tokenized_text, segment_ids, index)
+    return computeLogProb(text, tokenized_text, index)
 
 def noContext(word):
     if word in '.?,:!;\'\"‘’“”':
@@ -80,9 +80,9 @@ def compute_ratios(input_text):
     prepped_text = prepareInputs(input_text)
     tokenized_text = tokenizer.tokenize(prepped_text)
 
-    print(tokenized_text)
+    # print(tokenized_text)
 
-    segment_ids = createSegIDs(tokenized_text)
+    # segment_ids = createSegIDs(tokenized_text)
 
     results = []
     compoundBigPreds = []
@@ -92,8 +92,8 @@ def compute_ratios(input_text):
     currentWord = ""
 
     for i in range(1, len(tokenized_text) - 1):
-        bigPreds, bigLogProb = bigContext(tokenized_text, segment_ids, i)
-        smallPreds, smallLogProb = smallContext(tokenized_text, segment_ids, i)
+        bigPreds, bigLogProb = bigContext(tokenized_text, i)
+        smallPreds, smallLogProb = smallContext(tokenized_text, i)
 
         if tokenized_text[i + 1].startswith("##"):
             compoundBigLogProb += bigLogProb
@@ -115,9 +115,6 @@ def compute_ratios(input_text):
             currentWord = tokenized_text[i]
         
         noContextLogProb = noContext(currentWord)
-
-        if tokenized_text[i + 1] not in "[SEP]":
-            currentWord += " "
 
         # High ratio = knowing more words helped prediction a lot
         results.append(dict(

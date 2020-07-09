@@ -1,3 +1,7 @@
+let globalIndex = 0
+let globalGuesses = 1
+let globalGuessArray = []
+
 /* showTooltip reveals a tooltip attached to an element
  * Parameters: myID, the ID of the element with a tooltip
  * Postcondition: the tooltip attached to that element
@@ -33,35 +37,69 @@ function bold(elem) {
  * Parameters: elem, an element
  * Postcondition: elem's font-weight is set to normal
  */
-
 function unbold(elem) {
     d3.select(elem)
     .style("font-weight", "normal")
 }
-function generate(data) {
-    let results = data.results;
-    let colors = assignColors(results)
-    let highestRatio = 0
-    let blank = 0
 
-    d3.select(".results").html("")
-    .append("div")
-        .attr("id", "colored_output")
-
-    for (i = 0; i < results.length; i++) {
-        bigToNoRatio = results[i].bigContextLogProb - results[i].noContextLogProb
-        if (bigToNoRatio > highestRatio) {
-            highestRatio = bigToNoRatio
-            blank = i
+function drawGuessPlot() {
+    let plotData = [
+        {
+            x: globalGuessArray.map(x=>x.index),
+            y: globalGuessArray.map(x=>x.guesses),
+            type: 'bar',
+            name: 'number of guesses per sentence'
         }
+    ];
+    let layout = {
+        title: 'Number of guesses per sentence',
+        xaxis: {
+          title: 'Sentence Number',
+          showgrid: false,
+          zeroline: false
+        },
+        yaxis: {
+          title: 'Number of Guesses',
+          showline: false
+        }
+    };
+    Plotly.newPlot('guessplot', plotData, layout);
+}
 
-        d3.select("#colored_output")
-        .append("span")
-            .attr("id", "tooltip" + i)
-            .text(results[i].word)
-            .attr("style", "background-color:" + colors[i] + ";font-size:150%;")
+function checkAnswer(elem, answer, blankIndex) {
+    guess = elem.innerHTML
+    console.log(guess)
+    console.log(answer)
+
+    if (guess == answer) {
+        d3.select("#info" + globalIndex)
+        .text(" Total guesses: " + globalGuesses + ". Correct answer: " + answer)
+        
+        d3.select("#tooltip" + blankIndex)
+        .text(answer + "\u00a0")
+        .style("font-size", "150%")
+
+        globalGuessArray.push({
+            index: "Sentence " + globalIndex,
+            guesses: globalGuesses
+        })
+
+        drawGuessPlot()
+
+        globalGuesses = 1
     }
+    else {
+        d3.select(elem)
+        .style("color", "red")
 
+        d3.select("#info" + globalIndex)
+        .text(" Total guesses: " + globalGuesses)
+
+        globalGuesses++
+    }
+}
+
+function addBlank(blank) {
     d3.select("#tooltip" + blank)
     .attr("style", "background-color:white;")
     .text("__________ ")
@@ -72,14 +110,81 @@ function generate(data) {
         .attr("class", "tooltiptext")
         .append("ol")
             .attr("id", "list" + blank);
+}
 
-    for (j = 0; j < results[blank].bigContextPreds.length; j++) {
+function shuffle(anArray) {
+    var currentIndex = anArray.length
+
+    while (0 != currentIndex) {
+        let randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+
+        let temporaryValue = anArray[currentIndex];
+        anArray[currentIndex] = anArray[randomIndex];
+        anArray[randomIndex] = temporaryValue;
+    }
+
+    return anArray;
+}
+
+function generate(data, origText) {
+    globalIndex++
+    
+    let results = data.results;
+    let colors = assignColors(results)
+    let highestRatio = 0
+    let blank = 0
+    let blankedWord = ""
+
+    d3.select("#results").html("")
+    .append("div")
+        .attr("id", "colored_output")
+
+    for (i = 0; i < results.length; i++) {
+        word = results[i].word
+        console.log(word)
+        bigToNoRatio = results[i].bigContextLogProb - results[i].noContextLogProb
+        if (bigToNoRatio > highestRatio) {
+            highestRatio = bigToNoRatio
+            blank = i
+            blankedWord = word
+        }
+
+        d3.select("#colored_output")
+        .append("span")
+            .attr("id", "tooltip" + i)
+            .attr("class", "tooltip")
+            .text(word + "\u00a0")
+            .attr("style", "background-color:" + colors[i] + ";font-size:150%;")
+    }
+
+    origText = origText.replace(blankedWord, "_________")
+    d3.select("#history")
+    .append("div")
+        .attr("id", "sentence" + globalIndex)
+        .text("Sentence " + (globalIndex) + ": " + origText)
+        .append("span")
+            .attr("id", "info" + globalIndex)
+            .text(" Total guesses: ")
+
+    addBlank(blank)
+
+    let optionsList = results[blank].bigContextPreds
+    if (!(optionsList.includes(blankedWord))) {
+        optionsList[optionsList.length - 1] = blankedWord
+    }
+
+    let shuffledOptions = shuffle(optionsList)
+
+    for (j = 0; j < shuffledOptions.length; j++) {
         d3.select("#list" + blank)
         .append("li")
-            .text(results[blank].bigContextPreds[j])
+            .attr("id", "listitem" + j)
+            .text(shuffledOptions[j])
             .attr("style", "font-size:150%;")
             .on("mouseover", function(){bold(this);})
             .on("mouseout", function(){unbold(this);})
+            .on("click", function(){checkAnswer(this, results[blank].word, blank);})
     }
 
     let plotData = [
@@ -132,5 +237,5 @@ async function getData() {
 
     let data = await response.json()
 
-    generate(data);
+    generate(data, text.value);
 }
