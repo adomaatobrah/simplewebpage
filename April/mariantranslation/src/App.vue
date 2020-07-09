@@ -159,12 +159,10 @@ export default {
 
         if (!this.auto){this.eParaphrases.unshift(this.inputData.newEnglish);}
         if (skip == "false"){
-        this.hideTranslation = false;
-        this.sParaphrases.unshift(this.inputData.translation);
+          this.hideTranslation = false;
+          this.sParaphrases.unshift(this.inputData.translation);
         }
-        else{
-        this.hideTranslation = true;
-        }
+        else{this.hideTranslation = true;}
       }
   },
 
@@ -183,10 +181,7 @@ export default {
       Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
       const res = await fetch(url);
       const input = await res.json();
-      if (this.auto){ 
-        this.inputData = input;
-        }
-      else {this.getResult(this.input.english, input.newEnglish, "false");}
+      this.inputData = input;
       this.selected = false;
       this.auto = false;
     },
