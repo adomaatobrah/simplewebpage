@@ -16,30 +16,6 @@ model = BertForMaskedLM.from_pretrained("bert-base-cased")
 tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def prepareInputs(init_text):
-    # List of punctuation to determine where segments end
-    punc_list = [".", "?", "!"]
-    # Prepend the [CLS] tag
-    prompt_text = "[CLS] " + init_text + " [SEP]"
-    # # Insert the [SEP] tags
-    # for i in range(0, len(prompt_text)):
-    #     if prompt_text[i] in punc_list:
-    #         prompt_text = prompt_text[:i + 1] + " [SEP]" + prompt_text[i + 1:]
-    #     elif i == len(prompt_text) - 1 and prompt_text[i] not in punc_list:
-    #         prompt_text += " [SEP]"
-
-    return prompt_text
-
-# def createSegIDs(tokenized_text):
-#     currentSeg = 0
-#     seg_ids = []
-#     for token in tokenized_text:
-#         seg_ids.append(currentSeg)
-#         if token == "[SEP]":
-#             currentSeg += 1
-
-#     return seg_ids
-
 def computeLogProb(masked_text, original_text, index):
     indexed_tokens = tokenizer.convert_tokens_to_ids(masked_text)
     tokens_tensor = torch.tensor([indexed_tokens])
@@ -53,7 +29,16 @@ def computeLogProb(masked_text, original_text, index):
     next_token_logprobs = next_token_logits - next_token_logits.logsumexp(0)
     logProb = next_token_logprobs[tokenizer.convert_tokens_to_ids(original_text[index])].item()
 
-    return (preds, logProb)
+    return (preds, logProb, next_token_logprobs)
+
+def computePredsLogProbs(preds, next_token_logprobs):
+    predLogProbs = []
+    for i in preds:
+        predLogProbs.append(next_token_logprobs[tokenizer.convert_tokens_to_ids(i)].item())
+        print(i)
+        print(predLogProbs)
+    return predLogProbs
+
 
 def bigContext(tokenized_text, index):
     text = tokenized_text.copy()
@@ -77,13 +62,10 @@ def noContext(word):
     return math.log(freq)
 
 def compute_ratios(input_text):
-    prepped_text = prepareInputs(input_text)
+    prepped_text = "[CLS] " + input_text + " [SEP]"
     tokenized_text = tokenizer.tokenize(prepped_text)
 
-    # print(tokenized_text)
-
-    # segment_ids = createSegIDs(tokenized_text)
-
+    usedModels = ["BigContext", "SmallContext", "NoContext"]
     results = []
     compoundBigPreds = []
     compoundSmallPreds = []
@@ -92,8 +74,11 @@ def compute_ratios(input_text):
     currentWord = ""
 
     for i in range(1, len(tokenized_text) - 1):
-        bigPreds, bigLogProb = bigContext(tokenized_text, i)
-        smallPreds, smallLogProb = smallContext(tokenized_text, i)
+        bigPreds, bigLogProb, bigNextLogProbs = bigContext(tokenized_text, i)
+        smallPreds, smallLogProb, smallNextLogProbs = smallContext(tokenized_text, i)
+
+        bigPredsLogProbs = computePredsLogProbs(smallPreds, bigNextLogProbs)
+        smallPredsLogProbs = computePredsLogProbs(smallPreds, smallNextLogProbs)
 
         if tokenized_text[i + 1].startswith("##"):
             compoundBigLogProb += bigLogProb
@@ -115,15 +100,22 @@ def compute_ratios(input_text):
             currentWord = tokenized_text[i]
         
         noContextLogProb = noContext(currentWord)
+        noPredsLogProbs = []
+        for i in smallPreds:
+            noPredsLogProbs.append(noContext(i))
 
         # High ratio = knowing more words helped prediction a lot
         results.append(dict(
             word=currentWord,
+            usedModels = usedModels,
             bigContextLogProb=compoundBigLogProb,
             smallContextLogProb=compoundSmallLogProb,
             noContextLogProb=noContextLogProb,
             bigContextPreds = compoundBigPreds,
-            smallContextPreds = compoundSmallPreds))
+            smallContextPreds = compoundSmallPreds,
+            bigPredsLogProbs = bigPredsLogProbs,
+            smallPredsLogProbs = smallPredsLogProbs,
+            noPredsLogProbs = noPredsLogProbs))
         
         compoundBigLogProb = 0
         compoundSmallLogProb = 0

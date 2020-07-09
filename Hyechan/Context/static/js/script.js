@@ -208,6 +208,73 @@ function generate(data, origText) {
         }
       ];
       Plotly.newPlot('plot', plotData);
+
+      generateTable(results)
+}
+
+function generateTable(results) {
+    console.log(results)
+    d3.select("#predstable")
+    .html("")
+    .append("table")
+        .attr("id", "thetable")
+        .append("thead")
+            .attr("id", "header")
+            .append("tr")
+            .attr("id", "headerrow")
+                .append("th")
+                .text("Word")
+    
+    for (i = 0; i < results[0].usedModels.length; i++) {
+        d3.select("#headerrow")
+        .append("th")
+            .text(results[0].usedModels[i])
+    }
+
+    d3.select("#thetable")
+    .append("tbody")
+        .attr("id", "tablebody")
+
+    for (i = 0; i < results.length; i++) {
+        d3.select("#tablebody")
+        .append("tr")
+            .attr("id", "row" + i)
+                .append("td")
+                    .text(results[i].word)
+        
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].bigContextLogProb)
+
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].smallContextLogProb)
+    
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].noContextLogProb)
+
+        for (j = 0; j < results[i].smallContextPreds.length; j++) {
+            d3.select("#tablebody")
+            .append("tr")
+                .attr("id", "row" + i + "_" + j)
+                .style("font-size", "75%")
+                    .append("td")
+                        .text(results[i].smallContextPreds[j])
+                        
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].bigPredsLogProbs[j])
+
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].smallPredsLogProbs[j])
+                
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].noPredsLogProbs[j])
+        }
+    }
 }
 
 function assignColors(results) {
