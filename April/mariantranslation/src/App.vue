@@ -9,48 +9,34 @@
         rows="4" cols="50"
         required
         v-on:keyup="sParaphrases = [], eParaphrases = []">
-        It was a dark and stormy night.
       </textarea><br><br>
-      <br> 
-      <br>
-      <label for="start">Desired beginning</label><br>
-      <textarea 
-        id = "start" 
-        name='text'
-        v-model="input.start"
-        rows="4" cols="50"
-        value="La"
-        :disabled = defaulttrans>
-      </textarea><br>
-      <input type="checkbox" id="default-checkbox" v-model="defaulttrans">
-      <label for="checkbox">Use default translation</label><br><br>
       <input type="checkbox" id="auto-checkbox" v-model="auto">
       <label for="checkbox">Show auto-generated rewordings</label><br><br>
       <input type="checkbox" id="skip-checkbox" v-model="skip">
       <label for="checkbox">English only</label><br><br>
-      <button @click="getResult(input.english, input.start)">continue</button>
+      <button @click="getResult(input.english, input.start, 'true')">continue</button>
   </div>
  
     <div v-if="!hideTranslation" class="results">
       Expected translation:<br><br>
-      <button @click="auto = false; getResult(input.english, wholeTranslation.expected)" style="font-size: 25px;" class = "plain">
-        {{ wholeTranslation.expected }}
+      <button @click="auto = false; getResult(input.english, inputData.expected, 'false')" style="font-size: 25px;" class = "plain">
+        {{ inputData.expected }}
       </button><br><br>
       Generated translation(s):<br>
-      <p v-for="(alt, ind) in wholeTranslation.alternatives" class="tooltip">
-        <button @click="auto = false; getResult(input.english, alt)" style="font-size: 25px;" class = "plain">
+      <p v-for="(alt, ind) in inputData.alternatives" class="tooltip">
+        <button @click="auto = false; getResult(input.english, alt, 'false')" style="font-size: 25px;" class = "plain">
           {{ alt }}<br>
           <div class="tooltiptext" style="width: 90%">
-            {{ wholeTranslation.engAlternatives[ind] }}
+            {{ inputData.engAlternatives[ind] }}
           </div>
         </button>
       </p>
       <p style="font-size: 25px;">
-      <span class="tooltip" v-for="(word, ind) in wholeTranslation.tokens">
+      <span class="tooltip" v-for="(word, ind) in inputData.tokens">
         {{ word }}
         <div id=ind class="tooltiptext">
           <ol>
-            <li v-for="(i in wholeTranslation.predictions[ind]">
+            <li v-for="(i in inputData.predictions[ind]">
               <button @click="recalculate(i, ind)">
                 '{{i}}'
               </button>
@@ -61,14 +47,14 @@
     </p>
       English back translation:
       <p style="font-size: 25px;">
-        {{ wholeTranslation.newEnglish }}
+        {{ inputData.newEnglish }}
       </p>
       History:
       <div class="grid-container">
         <div class="grid-item">
           <p style="text-align:center">Spanish</p>
         <p v-for="paraphrase in sParaphrases">
-          <button @click="auto=false; getResult(input.english, paraphrase)" class="plain">
+          <button @click="auto=false; getResult(input.english, paraphrase, 'false')" class="plain">
             {{ paraphrase }}
           </button>
         </p>
@@ -76,7 +62,7 @@
         <div class="grid-item">
           <p style="text-align:center">English</p>
         <p v-for="paraphrase in eParaphrases">
-         <button @click="skip=true; getResult(paraphrase, input.start)" class="plain">
+         <button @click="skip=true; getResult(paraphrase, input.start, 'true')" class="plain">
           {{ paraphrase }}
          </button>
         </p>
@@ -84,20 +70,19 @@
       </div>
    </div>
 
-   <div v-if="!hideAlts" class="results">
-    Alternatives:<br>
-    <p v-for="(alt, ind) in wholeTranslation.alternatives" class="tooltip">
-      <button @click="auto = false; getResult(input.english, alt)" style="font-size: 25px;" class = "plain">
+   <div class="results"><br>
+    <p v-for="alt in inputData.alternatives" class="tooltip">
+      <button @click="auto = false; getResult(input.english, alt, 'false')" style="font-size: 20px;" class = "plain">
         {{ alt }}
-        <div class="tooltiptext" style="width: 90%">
-          {{ wholeTranslation.engAlternatives[ind] }}
-        </div>
+        <!-- <div class="tooltiptext" style="width: 90%">
+          {{ inputData.engAlternatives[ind] }}
+        </div> -->
       </button><br>
     </p>
 
     <p style="font-size: 25px;">
     <span class="tooltip" style="font-size: 25px;" 
-            v-for="(word, ind) in wholeTranslation.tokens">
+            v-for="(word, ind) in inputData.tokens">
     <span @click="selected = word"
     :class="colorClass(word)"
     style = "cursor: pointer">
@@ -105,7 +90,7 @@
     </span> 
       <div id=ind class="tooltiptext">
         <ol>
-          <li v-for="(i in wholeTranslation.predictions[ind]">
+          <li v-for="(i in inputData.predictions[ind]">
             <button @click="selected = ''; recalculate(i, ind)">
               '{{i}}'
             </button>
@@ -113,7 +98,7 @@
         </ol>
       </div>
     </span>
-    <button @click="getResult(input.english, selected)">
+    <button @click="rearrange(inputData.newEnglish, selected)">
       Rearrange
     </button>
   </p>
@@ -121,7 +106,7 @@
      <br><br>
     History:
       <p v-for="paraphrase in eParaphrases">
-        <button @click="skip=true; getResult(paraphrase, input.start)" class="plain">
+        <button @click="skip=true; getResult(paraphrase, input.start, 'true')" class="plain">
           {{ paraphrase }}
         </button>
       </p>
@@ -140,14 +125,11 @@ export default {
       },
       sParaphrases: [],
       eParaphrases: [],
-      msg: '',
-      defaulttrans: false,
       auto: false,
       skip: false,
       hideTranslation: true,
-      hideAlts: true,
       selected: '',
-      wholeTranslation: {"translation": '',
+      inputData: {"translation": '',
                          "expected": '',
                          "newEnglish": '',
                          "tokens": [],
@@ -159,55 +141,57 @@ export default {
   },
 
   methods: {
-    async getResult(english, start){
-     if (this.auto){
-       var url = new URL("http://localhost:5000/auto");
-        }
-     else if (this.selected != ''){
-         var url = new URL("http://localhost:5000/rearrange");
-       }
-      else{
+    async getResult(english, start, copy){
+      let urlend = ''
+      if (this.auto){ this.rearrange(english, ''); }
+      else { 
         var url = new URL("http://localhost:5000/result")
-       }
+        if (this.skip == true){ var skip = "true"}
+        else{
+          var skip = "false";
+          copy = false}
 
-    if (this.skip == true){ var skip = "true"}
-    else{var skip = "false"}
+        var params = {english:english, start:start, skip:skip, copy:copy}
+        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+        const res = await fetch(url);
+        const input = await res.json();
+        this.inputData = input;
 
-    var params = {english:english, start:start, skip:skip}
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
-    const res = await fetch(url);
-    const input = await res.json();
-    this.wholeTranslation = input;
-
-    if (this.selected == ''){this.eParaphrases.unshift(this.wholeTranslation.newEnglish);}
-    else{
-      this.selected = '';
-      this.getResult(this.wholeTranslation.newEnglish, '')
-    }
-    if (skip == "false"){
-      this.hideTranslation = false;
-      this.hideAlts = true;
-      this.sParaphrases.unshift(this.wholeTranslation.translation);
-    }
-    else{
-      this.hideAlts = false;
-      this.hideTranslation = true;
-    }
+        if (!this.auto){this.eParaphrases.unshift(this.inputData.newEnglish);}
+        if (skip == "false"){
+          this.hideTranslation = false;
+          this.sParaphrases.unshift(this.inputData.translation);
+        }
+        else{this.hideTranslation = true;}
+      }
   },
+
     async recalculate(changedword, index){
-     this.$set(this.wholeTranslation.tokens, index, changedword);
-     var thelist = this.wholeTranslation.tokens.slice(0, index+1);
+     this.$set(this.inputData.tokens, index, changedword);
+     var thelist = this.inputData.tokens.slice(0, index+1);
      var newinputstr = thelist.join('').replace(/\u00a0/g, ' ');
-     this.getResult(this.input.english, newinputstr)
+     this.getResult(this.input.english, newinputstr, "false")
+    },
+    
+    async rearrange(english, start){
+      var url = new URL("http://localhost:5000/rearrange");
+      if (this.auto){var auto = 'true'}
+      else {var auto = 'false'}
+      var params = {english:english, start:start, auto:auto}
+      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+      const res = await fetch(url);
+      const input = await res.json();
+      this.inputData = input;
+      this.selected = false;
+      this.auto = false;
     },
     colorClass(word) {
       if (word==this.selected){
-        return "blueClass";
+        return "yellowClass";
       }
       else {return "tooltip"}
       }
     },
-
 };
 </script>
 
@@ -220,7 +204,7 @@ export default {
   color: #2c3e50;
   margin-top: 60px;
 }
-.blueClass {
+.yellowClass {
   background-color: yellow;
 }
 .results {

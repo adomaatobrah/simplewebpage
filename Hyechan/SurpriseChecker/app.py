@@ -38,7 +38,6 @@ def createSegIDs(tokenized_text):
     return seg_ids
 
 def addMask(tokenized_text, mask_word):
-    print(tokenized_text)
     mask_word_tokens = tokenizer.tokenize(mask_word)
     mask_indices = []
     for i in range(0, len(tokenized_text)):
@@ -49,33 +48,78 @@ def addMask(tokenized_text, mask_word):
     return (tokenized_text, mask_indices)
 
 def compute_model_score(text, word_to_mask):
+    # Preparing input and segments
     prepped_text = prepareInputs(text)
     tokenized_text = tokenizer.tokenize(prepped_text)
+    indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_text)
     segment_ids = createSegIDs(tokenized_text)
+
+    # Masking
     masked_text, mask_indices = addMask(tokenized_text, word_to_mask)
-    print(masked_text)
+    indexed_masked_tokens = tokenizer.convert_tokens_to_ids(masked_text)
 
-    indexed_tokens = tokenizer.convert_tokens_to_ids(masked_text)
-    masked_token_id = tokenizer.convert_tokens_to_ids(word_to_mask)
+    # Mutable result variables
+    totalPreds = []
+    totalProbs = []
+    nextSentences = []
 
-    tokens_tensor = torch.tensor([indexed_tokens])
+    getPreds(indexed_tokens,
+             indexed_masked_tokens,
+             masked_text, segment_ids,
+             mask_indices,
+             totalPreds,
+             totalProbs,
+             nextSentences,
+             0)
+    
+    return (totalPreds, totalProbs, nextSentences)
+
+def getSinglePred(indexed_tokens, indexed_masked_tokens, segment_ids, mask_index):
+    tokens_tensor = torch.tensor([indexed_masked_tokens])
     segment_tensor = torch.tensor([segment_ids])
 
     with torch.no_grad():
         outputs = model(tokens_tensor, token_type_ids=segment_tensor)
         prediction_scores = outputs[0]
 
-    probs = []
+    next_token_logits = prediction_scores[0, mask_index, :]
+    preds = ([tokenizer.convert_ids_to_tokens(index.item()) for index in next_token_logits.topk(5).indices])
+    prob = torch.softmax(next_token_logits, 0)[indexed_tokens[mask_index]].item()
 
-    for i in mask_indices:
-        next_token_logits = prediction_scores[0, i, :]
-        prob = torch.softmax(next_token_logits, 0)[masked_token_id]
-        probs.append(prob.item())
-    
-    return probs
+    return (preds, prob)
 
-def compute_wordfreq_score(masked_word):
-    freqs = wordfreq.get_frequency_dict('es')
+def getPreds(indexed_tokens,
+             indexed_masked_tokens,
+             masked_text,
+             segment_ids,
+             mask_indices,
+             totalPreds,
+             totalProbs,
+             nextSentences,
+             index):
+    preds, prob = getSinglePred(indexed_tokens, indexed_masked_tokens, segment_ids, mask_indices[index])
+    totalPreds.append(preds)
+    totalProbs.append(prob)
+
+    for next_word in preds:
+        masked_text[mask_indices[index]] = next_word
+        indexed_masked_tokens = tokenizer.convert_tokens_to_ids(masked_text)
+        if (index == len(mask_indices) - 1):
+            result = [indexed_masked_tokens[i] for i in mask_indices]
+            nextSentences.append(tokenizer.decode(result))
+        else:
+            getPreds(indexed_tokens,
+                        indexed_masked_tokens,
+                        masked_text,
+                        segment_ids,
+                        mask_indices,
+                        totalPreds,
+                        totalProbs,
+                        nextSentences,
+                        index + 1)
+
+def compute_wordfreq_score(masked_word, lang):
+    freqs = wordfreq.get_frequency_dict(lang)
     return freqs[masked_word]
 
 @app.route('/')
@@ -87,8 +131,12 @@ def result():
     data = request.get_json()
     text = data["text"]
     word_to_mask = data["mask"]
+
+    preds, probs, sentences = compute_model_score(text, word_to_mask)
         
     return {
-        'model_score': compute_model_score(text, word_to_mask),
-        'wordfreq_score': compute_wordfreq_score(word_to_mask)
+        'model_score': probs,
+        'predictions': preds,
+        'sentences': sentences,
+        'wordfreq_score': compute_wordfreq_score(word_to_mask, 'es')
     }
