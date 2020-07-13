@@ -35,3 +35,7 @@
   max-width: 800px;
   padding: 10px;
 }
+
+li:hover {
+  font-weight: bold;
+}

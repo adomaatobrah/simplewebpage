@@ -178,10 +178,6 @@ def compute_scores(input_text):
 
     return (results, usedModels)
 
-@app.route('/')
-def form():
-    return render_template("home.html")
-
 @app.route('/', methods=['POST'])
 def result():
     data = request.get_json()
