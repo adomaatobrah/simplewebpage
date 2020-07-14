@@ -4,6 +4,7 @@ from flask_cors import CORS
 import random
 import string
 import models
+import json
 
 DEBUG = True
 app = Flask(__name__)
@@ -14,29 +15,39 @@ CORS(app, resources={r'/*': {'origins': '*'}})
 
 @app.route('/result', methods=['GET'])
 def result():
-    skip = request.args.get("skip") == 'true'
-    copy_input = request.args.get('copy') == 'true'
-    english = request.args.get('english')
+    content= request.args.get('q')
+    data = json.loads(content)
+    print(data)
+    print(type(data))
 
-    if copy_input:
+    english_only = data["skip"]
+    english = data["english"]
+    copy = data["copy"]
+    if copy:
+        print("wrong")
         start = english
     else:
-        start = request.args.get('start')
+        print("right")
+        print(data['start'])
+        start = data["start"]
 
     return jsonify(
         models.incremental_generation(
-            english_only=skip,
+            english_only=english_only,
             english=english, 
             start=start,
-            prefix_only=False)
+            prefix_only=False
+            )
         )
 
 
 @app.route('/rearrange', methods=['GET'])
 def rearrange():
-    english = request.args.get('english')
-    start = request.args.get('start')
-    auto = request.args.get('auto')
+    content= request.args.get('q')
+    data = json.loads(content)
+    english = data['english']
+    start = data['start']
+    auto = data['auto']
 
     return jsonify(
         models.rearrange(
