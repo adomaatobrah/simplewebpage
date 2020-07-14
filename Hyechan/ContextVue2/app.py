@@ -10,7 +10,19 @@ app = Flask(__name__)
 
 # https://stackoverflow.com/questions/37575089/disable-template-cache-jinja2
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-CORS(app)
+CORS(app, resources={r'/*': {'origins': '*'}})
+
+jinja_options = app.jinja_options.copy()
+
+jinja_options.update(dict(
+    block_start_string='<%',
+    block_end_string='%>',
+    variable_start_string='%%',
+    variable_end_string='%%',
+    comment_start_string='<#',
+    comment_end_string='#>'
+))
+app.jinja_options = jinja_options
 
 model = BertForMaskedLM.from_pretrained("bert-base-cased")
 tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
@@ -64,7 +76,7 @@ def compute_scores(input_text):
     prepped_text = "[CLS] " + input_text + " [SEP]"
     tokenized_text = tokenizer.tokenize(prepped_text)
 
-    usedModels = ["BigContext", "SmallContext", "NoContext"]
+    usedModels = ["bigContext", "smallContext", "noContext"]
     results = []
     compoundBigPreds = []
     compoundSmallPreds = []
@@ -128,7 +140,7 @@ def compute_scores(input_text):
             model="smallContext",
             score=compoundSmallLogProb)
         )
-
+        
         results.append(dict(
             id = i - 1,
             word=currentWord,
@@ -136,7 +148,7 @@ def compute_scores(input_text):
             model="bigContext",
             score=compoundBigLogProb)
         )
-        
+
         results.append(dict(
             id = i - 1,
             word=currentWord,
@@ -179,11 +191,8 @@ def compute_scores(input_text):
     return (results, usedModels)
 
 @app.route('/')
-def home():
-    return {
-        'results': None,
-        'usedModels': None
-    }
+def form():
+    return render_template("home.html")
 
 @app.route('/', methods=['POST'])
 def result():
@@ -192,6 +201,7 @@ def result():
 
     print(text)
     results, usedModels = compute_scores(text)
+    print(results)
         
     return {
         'results': results,

@@ -1,15 +1,12 @@
 <template>
     <html>
-        <meta charset="utf-8"> 
-        <head>
-            <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-        </head>
+        <meta charset="utf-8">
             <body>
                 <div class="center">
                     <h2 style = "text-align:center">Predicting words given full vs. no context</h2>
                     <div style = "text-align:center">
                         Text: <input type='text' id='text'><br><br>
-                        <button id='submit' onclick='getData();'>Continue</button>
+                        <button id='submit' @click='getData();'>Continue</button>
                     </div>
                 </div><br>
 
@@ -29,6 +26,45 @@
             </body>
         </html>
 </template>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="./script.js"></script>
+<script>
+    export default {
+        data() {
+            return {
+                input: {
+                    text: ''
+                },
+                results: [],
+                usedModels: []
+            };
+        },
+        methods: {
+            async getData() {
+                let text = document.getElementById("text");
+
+                var entry = {
+                    text: text.value,
+                };
+
+                let response = await fetch("http://127.0.0.1:5000/", {
+                    method: "POST",
+                    mode: "cors",
+                    body: JSON.stringify(entry),
+                    cache: "no-cache",
+                    headers: new Headers({
+                        "content-type": "application/json"
+                    })
+                });
+
+                let data = await response.json();
+
+                generate(data, text.value);
+            }
+        }
+    };
+</script>
 
 <style>
     .center {
