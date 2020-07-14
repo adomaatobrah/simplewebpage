@@ -16,7 +16,7 @@
   display: inline-block;
 }
 
-.tooltiptext {
+.tooltip .tooltiptext {
   visibility: hidden;
   width: 150px;
   background-color: gray;
@@ -30,12 +30,12 @@
   z-index: 1;
 }
 
+.tooltip:hover .tooltiptext { visibility: visible; }
+
 .results {
   margin: auto;
   max-width: 800px;
   padding: 10px;
 }
 
-li:hover {
-  font-weight: bold;
-}
+li:hover { font-weight: bold; }

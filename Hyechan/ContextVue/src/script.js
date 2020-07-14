@@ -3,10 +3,10 @@ let globalGuesses = 1;
 let globalGuessArray = [];
 
 /* showTooltip reveals a tooltip attached to an element
- * Parameters: myID, the ID of the element with a tooltip
- * Postcondition: the tooltip attached to that element
- *      is made visible
- */
+* Parameters: myID, the ID of the element with a tooltip
+* Postcondition: the tooltip attached to that element
+*      is made visible
+*/
 function showTooltip(myID) {
     d3.select("#" + myID)
     .selectAll("div")
@@ -14,10 +14,10 @@ function showTooltip(myID) {
 }
 
 /* hideTooltip hides a tooltip attached to an element
- * Parameters: myID, the ID of the element with a tooltip
- * Postcondition: the tooltip attached to that element
- *      is made hidden
- */
+* Parameters: myID, the ID of the element with a tooltip
+* Postcondition: the tooltip attached to that element
+*      is made hidden
+*/
 function hideTooltip(myID) {
     d3.select("#" + myID)
     .selectAll("div")
@@ -36,13 +36,13 @@ function drawGuessPlot() {
     let layout = {
         title: 'Number of guesses per sentence',
         xaxis: {
-          title: 'Sentence Number',
-          showgrid: false,
-          zeroline: false
+        title: 'Sentence Number',
+        showgrid: false,
+        zeroline: false
         },
         yaxis: {
-          title: 'Number of Guesses',
-          showline: false
+        title: 'Number of Guesses',
+        showline: false
         }
     };
     Plotly.newPlot('guessplot', plotData, layout);
@@ -107,6 +107,80 @@ function shuffle(anArray) {
     }
 
     return anArray;
+}
+
+function generateTable(results) {
+    debugger
+    console.log(results)
+    d3.select("#predstable")
+    .html("")
+    .append("table")
+        .attr("id", "thetable")
+        .append("thead")
+            .attr("id", "header")
+            .append("tr")
+            .attr("id", "headerrow")
+                .append("th")
+                .text("Word");
+    
+    for (i = 0; i < results[0].usedModels.length; i++) {
+        d3.select("#headerrow")
+        .append("th")
+            .text(results[0].usedModels[i]);
+    }
+
+    d3.select("#thetable")
+    .append("tbody")
+        .attr("id", "tablebody");
+
+    for (i = 0; i < results.length; i++) {
+        d3.select("#tablebody")
+        .append("tr")
+            .attr("id", "row" + i)
+                .attr("style", "font-weight:bold;")
+                .append("td")
+                    .text(results[i].word);
+        
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].bigContextLogProb);
+
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].smallContextLogProb);
+    
+        d3.select("#row" + i)
+        .append("td")
+            .text(results[i].noContextLogProb);
+
+        for (j = 0; j < results[i].smallContextPreds.length; j++) {
+            d3.select("#tablebody")
+            .append("tr")
+                .attr("id", "row" + i + "_" + j)
+                .style("font-size", "75%")
+                    .append("td")
+                        .text(results[i].smallContextPreds[j]);
+                        
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].bigPredsLogProbs[j]);
+
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].smallPredsLogProbs[j]);
+                
+            d3.select("#row" + i + "_" + j)
+            .append("td")
+                .text(results[i].noPredsLogProbs[j]);
+        }
+    }
+}
+
+function assignColors(logRatios) {
+    return logRatios.map(x => {
+        if (x > 5) return 'lime';
+        return 'red';
+    })
 }
 
 function generate(data, origText) {
@@ -187,10 +261,10 @@ function generate(data, origText) {
 
     let plotData = [
         {
-          x: smallContextWords.map(x => x.word),
-          y: logRatios,
-          type: 'bar',
-          name: 'ratio (big context - no context)'
+        x: smallContextWords.map(x => x.word),
+        y: logRatios,
+        type: 'bar',
+        name: 'ratio (big context - no context)'
         },
         // {
         //   x: results.map(x=>x.word),
@@ -204,104 +278,8 @@ function generate(data, origText) {
             type: 'bar',
             name: 'word frequency (log scale)'
         }
-      ];
-      Plotly.newPlot('plot', plotData);
+    ];
+    Plotly.newPlot('plot', plotData);
 
-      generateTable(results);
-}
-
-function generateTable(results) {
-    debugger
-    console.log(results)
-    d3.select("#predstable")
-    .html("")
-    .append("table")
-        .attr("id", "thetable")
-        .append("thead")
-            .attr("id", "header")
-            .append("tr")
-            .attr("id", "headerrow")
-                .append("th")
-                .text("Word");
-    
-    for (i = 0; i < results[0].usedModels.length; i++) {
-        d3.select("#headerrow")
-        .append("th")
-            .text(results[0].usedModels[i]);
-    }
-
-    d3.select("#thetable")
-    .append("tbody")
-        .attr("id", "tablebody");
-
-    for (i = 0; i < results.length; i++) {
-        d3.select("#tablebody")
-        .append("tr")
-            .attr("id", "row" + i)
-                .attr("style", "font-weight:bold;")
-                .append("td")
-                    .text(results[i].word);
-        
-        d3.select("#row" + i)
-        .append("td")
-            .text(results[i].bigContextLogProb);
-
-        d3.select("#row" + i)
-        .append("td")
-            .text(results[i].smallContextLogProb);
-    
-        d3.select("#row" + i)
-        .append("td")
-            .text(results[i].noContextLogProb);
-
-        for (j = 0; j < results[i].smallContextPreds.length; j++) {
-            d3.select("#tablebody")
-            .append("tr")
-                .attr("id", "row" + i + "_" + j)
-                .style("font-size", "75%")
-                    .append("td")
-                        .text(results[i].smallContextPreds[j]);
-                        
-            d3.select("#row" + i + "_" + j)
-            .append("td")
-                .text(results[i].bigPredsLogProbs[j]);
-
-            d3.select("#row" + i + "_" + j)
-            .append("td")
-                .text(results[i].smallPredsLogProbs[j]);
-                
-            d3.select("#row" + i + "_" + j)
-            .append("td")
-                .text(results[i].noPredsLogProbs[j]);
-        }
-    }
-}
-
-function assignColors(logRatios) {
-    return logRatios.map(x => {
-        if (x > 5) return 'lime';
-        return 'red';
-    })
-}
-
-async function getData() {
-    let text = document.getElementById("text");
-
-    var entry = {
-        text: text.value,
-    };
-
-    let response = await fetch("http://127.0.0.1:5000/", {
-        method: "POST",
-        mode: "cors",
-        body: JSON.stringify(entry),
-        cache: "no-cache",
-        headers: new Headers({
-            "content-type": "application/json"
-        })
-    });
-
-    let data = await response.json();
-
-    generate(data, text.value);
+    generateTable(results);
 }

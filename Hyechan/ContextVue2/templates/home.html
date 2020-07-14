@@ -1,0 +1,63 @@
+<html>
+    <meta charset="utf-8"> 
+    <head>
+        <link rel="stylesheet" type="text/css" href="%% url_for('static', filename='css/mystyle.css') %%">
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    </head>
+    <body>
+        <div class="center">
+            <h2 style = "text-align:center">Predicting words given full vs. no context</h2>
+            <div style = "text-align:center">
+                Text: <input type='text' id='text'><br><br>
+                <button id='submit' onclick='getData();'>Continue</button>
+            </div>
+        </div><br>
+
+        <div class="key">
+            <span style="background-color:lime;">Easier with more context:</span> This word was far easier to predict with context<br>
+            <span style="background-color:red;">More context didn't change much:</span> Adding context did not make this word easier to predict<br>
+        </div>
+
+        <div id="resultsWrapper" class="results">
+            <div id="results">
+                <div id="colored-output">
+                    <span
+                        class="tooltip"
+                        v-for="item in output"
+                        v-bind:style="{ backgroundColor: item.color, fontSize: 24 }"
+                    >
+                        {{ item.word }}
+                        <div class="tooltiptext" v-if="item.blank === true">
+                            <ol>
+                                <li v-for="(pred, index) in shuffledPreds" v-on:click="checkAnswer(pred, index)">
+                                    {{ pred }}
+                                </li>
+                            </ol>
+                        </div>
+                    </span>
+                </div>
+            </div>
+            <br><br><br>
+
+            <div id="history">History: </div>
+            <div id="plot"></div>
+            <div id="guessplot"></div>
+            <div id="preds-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th v-for="col in cols"> {{ col }} </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in rows">
+                            <td v-for="col in cols"> {{ row[col] }} </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script src="%% url_for('static', filename='js/vue.js') %%"></script>
+        <script src="%% url_for('static', filename='js/script.js') %%"></script>
+    </body>
+</html>

@@ -179,8 +179,11 @@ def compute_scores(input_text):
     return (results, usedModels)
 
 @app.route('/')
-def form():
-    return render_template("home.html")
+def home():
+    return {
+        'results': None,
+        'usedModels': None
+    }
 
 @app.route('/', methods=['POST'])
 def result():
