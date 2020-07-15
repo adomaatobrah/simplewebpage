@@ -1,3 +1,5 @@
+var globalIndex = 0;
+
 var colored_output = new Vue({
     el: "#colored-output",
     data: {
@@ -7,12 +9,52 @@ var colored_output = new Vue({
         blankIndex: 0
     },
     methods: {
-        checkAnswer: function (guess, guessIndex) {
+        checkAnswer: function (guess, elem) {
             if (guess === this.correctAnswer) {
-                the_blank = this.output[this.blankIndex];
+                let the_blank = this.output[this.blankIndex];
                 the_blank.word = this.correctAnswer + "\u00a0";
                 the_blank.blank = false;
+                history_log.history[globalIndex].guesses++;
+                history_log.history[globalIndex].complete = true;
+
+                guess_plot.x.push("Sentence " + (globalIndex + 1));
+                guess_plot.y.push(history_log.history[globalIndex].guesses);
+                guess_plot.drawPlot();
+
+                globalIndex++;
             }
+            else {
+                elem.style.color = "red"
+                history_log.history[globalIndex].guesses++;
+            }
+        }
+    }
+})
+
+var history_log = new Vue({
+    el: "#history",
+    data: {
+        history: []
+    }
+})
+
+var guess_plot = new Vue({
+    el: "#guessplot",
+    data: {
+        x: [],
+        y: []
+    },
+    methods: {
+        drawPlot: function () {
+            let plotData = [
+                {
+                    x: this.x,
+                    y: this.y,
+                    type: 'bar',
+                    name: "Sentence guess count"
+                }
+            ]
+            Plotly.newPlot("guessplot", plotData);
         }
     }
 })
@@ -49,30 +91,24 @@ function assignColors(logRatios) {
 
 function generate(data, origText) {    
     let results = data.results;
-    console.log(results)
     preds_table.rows = results;
     preds_table.cols = Object.keys(results[0]);
 
     let origResults = results.filter(x => x.src === "original");
-    console.log(origResults)
     let nextPreds = results.filter(x => x.src === "smallContext");
-    console.log(nextPreds)
 
     // Get the words of the initial input
     let initialWords = origResults.filter(x => x.model === "smallContext").map(x => x.word);
 
     // Get the large context & no context log probabilities
     let bigContextProbs = origResults.filter(x => x.model === "bigContext").map(x => x.score);
-    console.log(bigContextProbs)
     let noContextProbs = origResults.filter(x => x.model === "noContext").map(x => x.score);
-    console.log(noContextProbs)
 
     // Compute log ratios
     let logRatios = [];
     for (i = 0; i < bigContextProbs.length; i++) {
         logRatios.push(bigContextProbs[i] - noContextProbs[i]);
     }
-    console.log(logRatios)
 
     // create color array to assign colors
     let colors = assignColors(logRatios);
@@ -84,7 +120,6 @@ function generate(data, origText) {
 
     for (i = 0; i < logRatios.length; i++) {
         word = initialWords[i];
-        console.log(word);
         if (logRatios[i] > highestRatio) {
             highestRatio = logRatios[i];
             blank = i;
@@ -94,6 +129,15 @@ function generate(data, origText) {
 
     colored_output.correctAnswer = blankedWord;
     colored_output.blankIndex = blank;
+
+    let histText = origText.replace(blankedWord, "__________");
+    var histEntry = {
+        sentence: histText,
+        answer: blankedWord,
+        guesses: 0,
+        complete: false
+    }
+    history_log.history.push(histEntry);
 
     let outputs = [];
     for (i = 0; i < logRatios.length; i++) {
@@ -120,7 +164,6 @@ function generate(data, origText) {
     if (!(optionsList.includes(blankedWord))) {
         optionsList[optionsList.length - 1] = blankedWord;
     }
-    console.log(optionsList)
 
     let shuffledOptions = shuffle(optionsList);
     colored_output.shuffledPreds = shuffledOptions;
@@ -132,20 +175,20 @@ function generate(data, origText) {
           type: 'bar',
           name: 'ratio (big context - no context)'
         },
-        // {
-        //   x: results.map(x=>x.word),
-        //   y: results.map(x=>x.bigContextLogProb - x.smallContextLogProb),
-        //   type: 'bar',
-        //   name: 'ratio (big context - small context)'
-        // },
+    //     // {
+    //     //   x: results.map(x=>x.word),
+    //     //   y: results.map(x=>x.bigContextLogProb - x.smallContextLogProb),
+    //     //   type: 'bar',
+    //     //   name: 'ratio (big context - small context)'
+    //     // },
         {
             x: initialWords,
-            y: origResults.filter(x => x.model = "noContext").map(x=>x.score),
+            y: origResults.filter(x => x.model === "noContext").map(x=>x.score),
             type: 'bar',
             name: 'word frequency (log scale)'
         }
-      ];
-      Plotly.newPlot('plot', plotData);
+    ];
+    Plotly.newPlot('plot', plotData);
 }
 
 async function getData() {
@@ -166,7 +209,6 @@ async function getData() {
     });
 
     let data = await response.json();
-    console.log(data)
 
     generate(data, text.value);
 }

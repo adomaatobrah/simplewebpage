@@ -29,7 +29,7 @@
                         {{ item.word }}
                         <div class="tooltiptext" v-if="item.blank === true">
                             <ol>
-                                <li v-for="(pred, index) in shuffledPreds" v-on:click="checkAnswer(pred, index)">
+                                <li v-for="pred in shuffledPreds" v-on:click="checkAnswer(pred, $event.srcElement)">
                                     {{ pred }}
                                 </li>
                             </ol>
@@ -39,7 +39,12 @@
             </div>
             <br><br><br>
 
-            <div id="history">History: </div>
+            <div id="history">History:
+                <div v-for="(entry, index) in history">
+                    <span>Sentence {{ index + 1 }}: {{ entry.sentence }} Total guesses: {{ entry.guesses }}</span>
+                    <span v-if="entry.complete === true"> The correct answer was: {{ entry.answer }}</span>
+                </div>
+            </div>
             <div id="plot"></div>
             <div id="guessplot"></div>
             <div id="preds-table">

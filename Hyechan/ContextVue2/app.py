@@ -46,8 +46,6 @@ def computePredsLogProbs(preds, next_token_logprobs):
     predLogProbs = []
     for i in preds:
         predLogProbs.append(next_token_logprobs[tokenizer.convert_tokens_to_ids(i)].item())
-        print(i)
-        print(predLogProbs)
     return predLogProbs
 
 def bigContext(tokenized_text, index):
@@ -199,9 +197,7 @@ def result():
     data = request.get_json()
     text = data["text"]
 
-    print(text)
     results, usedModels = compute_scores(text)
-    print(results)
         
     return {
         'results': results,
