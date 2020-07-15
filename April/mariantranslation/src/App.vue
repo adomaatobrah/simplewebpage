@@ -14,17 +14,17 @@
       <label for="checkbox">Show auto-generated rewordings</label><br><br>
       <input type="checkbox" id="skip-checkbox" v-model="skip">
       <label for="checkbox">English only</label><br><br>
-      <button @click="getResult(input.english, input.start, 'true')">continue</button>
+      <button @click="getResult(input.english, input.start, true)">continue</button>
   </div>
  
     <div v-if="!hideTranslation" class="results">
       Expected translation:<br><br>
-      <button @click="auto = false; getResult(input.english, inputData.expected, 'false')" style="font-size: 25px;" class = "plain">
+      <button @click="auto = false; getResult(input.english, inputData.expected, false)" style="font-size: 25px;" class = "plain">
         {{ inputData.expected }}
       </button><br><br>
       Generated translation(s):<br>
       <p v-for="(alt, ind) in inputData.alternatives" class="tooltip">
-        <button @click="auto = false; getResult(input.english, alt, 'false')" style="font-size: 25px;" class = "plain">
+        <button @click="auto = false; getResult(input.english, alt, false)" style="font-size: 25px;" class = "plain">
           {{ alt }}<br>
           <div class="tooltiptext" style="width: 90%">
             {{ inputData.engAlternatives[ind] }}
@@ -54,7 +54,7 @@
         <div class="grid-item">
           <p style="text-align:center">Spanish</p>
         <p v-for="paraphrase in sParaphrases">
-          <button @click="auto=false; getResult(input.english, paraphrase, 'false')" class="plain">
+          <button @click="auto=false; getResult(input.english, paraphrase, false)" class="plain">
             {{ paraphrase }}
           </button>
         </p>
@@ -62,7 +62,7 @@
         <div class="grid-item">
           <p style="text-align:center">English</p>
         <p v-for="paraphrase in eParaphrases">
-         <button @click="skip=true; getResult(paraphrase, input.start, 'true')" class="plain">
+         <button @click="skip=true; getResult(paraphrase, input.start, true)" class="plain">
           {{ paraphrase }}
          </button>
         </p>
@@ -72,11 +72,8 @@
 
    <div class="results"><br>
     <p v-for="alt in inputData.alternatives" class="tooltip">
-      <button @click="auto = false; getResult(input.english, alt, 'false')" style="font-size: 20px;" class = "plain">
+      <button @click="auto = false; getResult(input.english, alt, false)" style="font-size: 20px;" class = "plain">
         {{ alt }}
-        <!-- <div class="tooltiptext" style="width: 90%">
-          {{ inputData.engAlternatives[ind] }}
-        </div> -->
       </button><br>
     </p>
 
@@ -106,7 +103,7 @@
      <br><br>
     History:
       <p v-for="paraphrase in eParaphrases">
-        <button @click="skip=true; getResult(paraphrase, input.start, 'true')" class="plain">
+        <button @click="skip=true; getResult(paraphrase, input.start, true)" class="plain">
           {{ paraphrase }}
         </button>
       </p>
@@ -128,6 +125,7 @@ export default {
       auto: false,
       skip: false,
       hideTranslation: true,
+      msg: '',
       selected: '',
       inputData: {"translation": '',
                          "expected": '',
@@ -143,22 +141,25 @@ export default {
   methods: {
     async getResult(english, start, copy){
       let urlend = ''
+      if (!this.skip){copy = false;}
       if (this.auto){ this.rearrange(english, ''); }
       else { 
         var url = new URL("http://localhost:5000/result")
-        if (this.skip == true){ var skip = "true"}
-        else{
-          var skip = "false";
-          copy = false}
 
-        var params = {english:english, start:start, skip:skip, copy:copy}
-        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+        var params = {
+          english:english,
+          start:start,
+          skip:this.skip,
+          copy:copy
+        };
+        url.searchParams.append('q', JSON.stringify(params));
+
         const res = await fetch(url);
         const input = await res.json();
         this.inputData = input;
 
         if (!this.auto){this.eParaphrases.unshift(this.inputData.newEnglish);}
-        if (skip == "false"){
+        if (!this.skip){
           this.hideTranslation = false;
           this.sParaphrases.unshift(this.inputData.translation);
         }
@@ -170,15 +171,14 @@ export default {
      this.$set(this.inputData.tokens, index, changedword);
      var thelist = this.inputData.tokens.slice(0, index+1);
      var newinputstr = thelist.join('').replace(/\u00a0/g, ' ');
-     this.getResult(this.input.english, newinputstr, "false")
+     this.getResult(this.input.english, newinputstr, false)
     },
     
     async rearrange(english, start){
       var url = new URL("http://localhost:5000/rearrange");
-      if (this.auto){var auto = 'true'}
-      else {var auto = 'false'}
-      var params = {english:english, start:start, auto:auto}
-      Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+    
+      var params = {english:english, start:start, auto:this.auto}
+      url.searchParams.append('q', JSON.stringify(params));
       const res = await fetch(url);
       const input = await res.json();
       this.inputData = input;
