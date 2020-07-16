@@ -1,4 +1,4 @@
-var globalIndex = 0;
+var globalIndex = -1;
 
 var colored_output = new Vue({
     el: "#colored-output",
@@ -102,26 +102,31 @@ function generate(data, origText) {
 
     // Get the large context & no context log probabilities
     let bigContextProbs = origResults.filter(x => x.model === "bigContext").map(x => x.score);
+    let smallContextProbs = origResults.filter(x => x.model === "smallContext").map(x => x.score);
     let noContextProbs = origResults.filter(x => x.model === "noContext").map(x => x.score);
 
     // Compute log ratios
-    let logRatios = [];
+    let bigNoLogRatios = [];
+    let bigSmallLogRatios = [];
+    let smallNoLogRatios = [];
     for (i = 0; i < bigContextProbs.length; i++) {
-        logRatios.push(bigContextProbs[i] - noContextProbs[i]);
+        bigNoLogRatios.push(bigContextProbs[i] - noContextProbs[i]);
+        bigSmallLogRatios.push(bigContextProbs[i] - smallContextProbs[i]);
+        smallNoLogRatios.push(smallContextProbs[i] - noContextProbs[i]);
     }
 
     // create color array to assign colors
-    let colors = assignColors(logRatios);
+    let colors = assignColors(bigNoLogRatios);
 
     // Variables needed to generate blanks
     let highestRatio = 0;
     let blank = 0;
     let blankedWord = "";
 
-    for (i = 0; i < logRatios.length; i++) {
+    for (i = 0; i < bigNoLogRatios.length; i++) {
         word = initialWords[i];
-        if (logRatios[i] > highestRatio) {
-            highestRatio = logRatios[i];
+        if (bigNoLogRatios[i] > highestRatio) {
+            highestRatio = bigNoLogRatios[i];
             blank = i;
             blankedWord = word;
         }
@@ -140,7 +145,7 @@ function generate(data, origText) {
     history_log.history.push(histEntry);
 
     let outputs = [];
-    for (i = 0; i < logRatios.length; i++) {
+    for (i = 0; i < bigNoLogRatios.length; i++) {
         var dict = {
             word: "",
             color: "",
@@ -171,19 +176,37 @@ function generate(data, origText) {
     let plotData = [
         {
           x: initialWords,
-          y: logRatios,
+          y: bigNoLogRatios,
           type: 'bar',
           name: 'ratio (big context - no context)'
         },
-    //     // {
-    //     //   x: results.map(x=>x.word),
-    //     //   y: results.map(x=>x.bigContextLogProb - x.smallContextLogProb),
-    //     //   type: 'bar',
-    //     //   name: 'ratio (big context - small context)'
-    //     // },
+        {
+          x: initialWords,
+          y: bigSmallLogRatios,
+          type: 'bar',
+          name: 'ratio (big context - small context)'
+        },
         {
             x: initialWords,
-            y: origResults.filter(x => x.model === "noContext").map(x=>x.score),
+            y: smallNoLogRatios,
+            type: 'bar',
+            name: 'ratio (small context - no context)'
+        },
+        {
+            x: initialWords,
+            y: bigContextProbs,
+            type: 'bar',
+            name: 'big model probs (log scale)'
+        },
+        {
+            x: initialWords,
+            y: smallContextProbs,
+            type: 'bar',
+            name: 'small model probs (log scale)'
+        },
+        {
+            x: initialWords,
+            y: noContextProbs,
             type: 'bar',
             name: 'word frequency (log scale)'
         }
@@ -193,6 +216,7 @@ function generate(data, origText) {
 
 async function getData() {
     let text = document.getElementById("text");
+    globalIndex++;
 
     var entry = {
         text: text.value,
