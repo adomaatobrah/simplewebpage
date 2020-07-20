@@ -13,11 +13,17 @@
   </div>
 
    <div class="results"><br>
-    <p v-for="alt in inputData.alternatives" class="tooltip">
-      <button @click="getResult(inputText)" style="font-size: 20px;" class = "plain">
-        {{ alt }}
-      </button><br>
-    </p>
+    <ul>
+    <li v-for="alt in inputData.colorCoding" class="tooltip">
+      <button @click="getResult(inputText)" style="font-size: 15px;" class = "plain">
+        <span v-for="chunk in alt" 
+              v-bind:style="{ 'background-color': colors[chunk[1]] }">
+              {{ chunk[0] }}
+          </span>
+      </button>
+      <br>
+    </li>
+    </ul>
     </div>
  </div>
   </div>
@@ -28,9 +34,11 @@ export default {
   data() {
     return {
       inputText: '',
-      inputData: {"alternatives" : alternatives,
-                  "scores" : scores
-                          }
+      inputData: {"alternatives" : [],
+                  "scores" : [],
+                  "colorCoding" : []
+                          },
+      colors: [ 'white', '#ABE3BB', '#E4B0AF', '#3DA1B8', '#E4E2AF', '#B8473D', '#B39FCF', '#30915F']
     };
   },
 
@@ -60,13 +68,14 @@ export default {
   color: #2c3e50;
   margin-top: 60px;
 }
-.yellowClass {
-  background-color: yellow;
+ul {
+  line-height:300%
 }
+
 .results {
   text-align: left;
-  margin-left: 20%;
-  margin-right: 20%
+  margin-left: 10%;
+  margin-right: 10%
 }
 .tooltip {
   position: relative;
@@ -87,7 +96,7 @@ export default {
 }
 .tooltip:hover .tooltiptext { visibility: visible;}
 
-button.plain { background:none; border:none; text-align: left;}
+button.plain { background:none; border:none; text-align: left; }
 
 button.plain:hover { cursor: pointer;}
 
