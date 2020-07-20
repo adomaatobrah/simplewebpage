@@ -169,6 +169,8 @@ function generate(data, origText) {
     if (!(optionsList.includes(blankedWord))) {
         optionsList[optionsList.length - 1] = blankedWord;
     }
+    console.log(nextPreds)
+    console.log(optionsList)
 
     let shuffledOptions = shuffle(optionsList);
     colored_output.shuffledPreds = shuffledOptions;
