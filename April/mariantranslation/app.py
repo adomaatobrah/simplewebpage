@@ -13,7 +13,7 @@ app.config.from_object(__name__)
 
 CORS(app, resources={r'/*': {'origins': '*'}})
 
-@app.route('/result', methods=['GET'])
+@app.route('/api/result', methods=['GET'])
 def result():
     content= request.args.get('q')
     data = json.loads(content)
@@ -41,7 +41,7 @@ def result():
         )
 
 
-@app.route('/rearrange', methods=['GET'])
+@app.route('/api/rearrange', methods=['GET'])
 def rearrange():
     content= request.args.get('q')
     data = json.loads(content)
@@ -58,4 +58,4 @@ def rearrange():
     )
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=5009)

@@ -144,7 +144,7 @@ export default {
       if (!this.skip){copy = false;}
       if (this.auto){ this.rearrange(english, ''); }
       else { 
-        var url = new URL("http://localhost:5000/result")
+        var url = new URL("/api/result", window.location);
 
         var params = {
           english:english,
@@ -175,7 +175,7 @@ export default {
     },
     
     async rearrange(english, start){
-      var url = new URL("http://localhost:5000/rearrange");
+      var url = new URL("/api/rearrange", window.location);
     
       var params = {english:english, start:start, auto:this.auto}
       url.searchParams.append('q', JSON.stringify(params));
