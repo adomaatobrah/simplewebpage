@@ -199,14 +199,14 @@ def compute_scores(input_text):
 def form():
     return render_template("home.html")
 
-@app.route('/', methods=['POST'])
-def result():
-    data = request.get_json()
-    text = data["text"]
+# @app.route('/', methods=['POST'])
+# def result():
+#     data = request.get_json()
+#     text = data["text"]
 
-    results, usedModels = compute_scores(text)
+#     results, usedModels = compute_scores(text)
         
-    return {
-        'results': results,
-        'usedModels': usedModels
-    }
+#     return {
+#         'results': results,
+#         'usedModels': usedModels
+#     }

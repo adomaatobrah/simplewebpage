@@ -4,6 +4,8 @@ import json
 import torch
 import math
 import wordfreq
+import random
+from nltk.tokenize import sent_tokenize
 from transformers import BertTokenizer, BertForMaskedLM
 
 app = Flask(__name__)
@@ -196,12 +198,69 @@ def form():
 
 @app.route('/', methods=['POST'])
 def result():
-    data = request.get_json()
-    text = data["text"]
+    # data = request.get_json()
+    # text = data["text"]
 
-    results, usedModels = compute_scores(text)
+    src = open("src.txt", "r")
+    textList = sent_tokenize(src.read())
+    
+    fo = open("log.txt", "w")
+
+    for i in textList:
+        fo.write(i)
+        results, usedModels = compute_scores(i)
+
+        origWords = [res for res in filter(origCheck, results)]
+        bigContextRes = [res for res in filter(bigCheck, origWords)]
+        noContextRes = [res for res in filter(noCheck, origWords)]
+        bigToNoRatios = [bigContextRes[i]['score'] - noContextRes[i]['score'] for i in range(0, len(bigContextRes))]
+
+        blank = bigContextRes[bigToNoRatios.index(max(bigToNoRatios))]
+        blankedWord = blank['word']
+        blankID = blank['id']
+
+        fo.write(' Blanked word: ' + blankedWord)
+
+        predsList = []
+        for res in filter(predCheck, results):
+            if res['id'] == blankID and res['model'] == "smallContext":
+                predsList.append(res)
+
+        fo.write(' Predictions: ')
+        for i in range(0, len(predsList)):
+            fo.write(predsList[i]['word'] + ' ')
+
+        fo.write('\n')
+
+    src.close()
+    fo.close()
         
     return {
-        'results': results,
-        'usedModels': usedModels
+        None
+        # 'results': results,
+        # 'usedModels': usedModels
     }
+
+def origCheck(i):
+    if i['src'] == "original":
+        return True
+    else:
+        return False
+        
+def bigCheck(i):
+    if i['model'] == "bigContext":
+        return True
+    else:
+        return False
+
+def noCheck(i):
+    if i['model'] == "noContext":
+        return True
+    else:
+        return False
+
+def predCheck(i):
+    if i['src'] == "smallContext":
+        return True
+    else:
+        return False
