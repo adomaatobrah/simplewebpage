@@ -4,7 +4,9 @@ import json
 import torch
 import math
 import wordfreq
-from transformers import XLNetTokenizer, XLNetLMHeadModel
+import random
+from nltk.tokenize import sent_tokenize
+from transformers import BertTokenizer, BertForMaskedLM
 
 app = Flask(__name__)
 
@@ -24,26 +26,17 @@ jinja_options.update(dict(
 ))
 app.jinja_options = jinja_options
 
-model = XLNetLMHeadModel.from_pretrained("xlnet-base-cased")
-tokenizer = XLNetTokenizer.from_pretrained("xlnet-base-cased")
+model = BertForMaskedLM.from_pretrained("bert-base-cased")
+tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-PADDING_TEXT = """In 1991, the remains of Russian Tsar Nicholas II and his family
-(except for Alexei and Maria) are discovered.
-The voice of Nicholas's young son, Tsarevich Alexei Nikolaevich, narrates the
-remainder of the story. 1883 Western Siberia,
-a young Grigori Rasputin is asked by his father and a group of men to perform magic.
-Rasputin has a vision and denounces one of the men as a horse thief. Although his
-father initially slaps him for making such an accusation, Rasputin watches as the
-man is chased outside and beaten. Twenty years later, Rasputin sees a vision of
-the Virgin Mary, prompting him to become a priest. Rasputin quickly becomes famous,
-with people, even a bishop, begging for his blessing. <eod> </s> <eos>"""
-START_INDEX = 165 # TODO: change hard-coded value
-
-def computeLogProb(original_text, index, tokens_tensor, perm_mask, target_mapping):        
+def computeLogProb(masked_text, original_text, index):
+    indexed_tokens = tokenizer.convert_tokens_to_ids(masked_text)
+    tokens_tensor = torch.tensor([indexed_tokens])
+        
     with torch.no_grad():
-        outputs = model(tokens_tensor, perm_mask=perm_mask, target_mapping=target_mapping)
-        next_token_logits = outputs[0][0, 0, :]
+        outputs = model(tokens_tensor)
+        next_token_logits = outputs[0][0, index, :]
 
     preds = [tokenizer.convert_ids_to_tokens(index.item()) for index in next_token_logits.topk(5).indices]
     next_token_logprobs = next_token_logits - next_token_logits.logsumexp(0)
@@ -58,23 +51,16 @@ def computePredsLogProbs(preds, next_token_logprobs):
     return predLogProbs
 
 def bigContext(tokenized_text, index):
-    encoded_ids = tokenizer.convert_tokens_to_ids(tokenized_text)
-    tokens_tensor = torch.tensor([encoded_ids])
-    perm_mask = torch.zeros((1, tokens_tensor.shape[1], tokens_tensor.shape[1]), dtype=torch.float)
-    perm_mask[:, :, index] = 1.0
-    target_mapping = torch.zeros((1, 1, tokens_tensor.shape[1]), dtype=torch.float)
-    target_mapping[0, 0, index] = 1.0
-    return computeLogProb(tokenized_text, index, tokens_tensor, perm_mask, target_mapping)
+    text = tokenized_text.copy()
+    text[index] = "[MASK]"
+    return computeLogProb(text, tokenized_text, index)
 
 def smallContext(tokenized_text, index):
-    tokens_tensor = torch.tensor([tokenizer.convert_tokens_to_ids(tokenized_text)])
-    perm_mask = torch.zeros((1, tokens_tensor.shape[1], tokens_tensor.shape[1]), dtype=torch.float)
-    for i in range(START_INDEX, len(tokenized_text) - 1):
+    text = tokenized_text.copy()
+    for i in range(1, len(text) - 1):
         if i != index - 1 and i != index + 1:
-            perm_mask[:, :, i] = 1.0
-    target_mapping = torch.zeros((1, 1, tokens_tensor.shape[1]), dtype=torch.float)
-    target_mapping[0, 0, index] = 1.0
-    return computeLogProb(tokenized_text, index, tokens_tensor, perm_mask, target_mapping)
+            text[i] = "[MASK]"
+    return computeLogProb(text, tokenized_text, index)
 
 def noContext(word):
     if word in '.?,:!;\'\"‘’“”|-/\\':
@@ -86,7 +72,9 @@ def noContext(word):
     return math.log(freq)
 
 def compute_scores(input_text):
-    tokenized_text = tokenizer.tokenize(PADDING_TEXT + " " + input_text + "</s>", add_special_tokens=False, return_tensors='pt')
+    # Prepend and append tags and tokenize text
+    prepped_text = "[CLS] " + input_text + " [SEP]"
+    tokenized_text = tokenizer.tokenize(prepped_text)
 
     usedModels = ["bigContext", "smallContext", "noContext"]
     results = []
@@ -97,8 +85,8 @@ def compute_scores(input_text):
     currentWord = ""
     resultID = 0
 
-    # For each token not in PADDING_TEXT
-    for i in range(START_INDEX, len(tokenized_text) - 1):
+    # For each token
+    for i in range(1, len(tokenized_text) - 1):
         # Compute the top 5 model predictions, the log probability of the
         #   correct answer, and the next_token_logprobs
         bigPreds, bigLogProb, bigNextLogProbs = bigContext(tokenized_text, i)
@@ -109,33 +97,42 @@ def compute_scores(input_text):
         bigPredsLogProbs = computePredsLogProbs(smallPreds, bigNextLogProbs)
         smallPredsLogProbs = computePredsLogProbs(smallPreds, smallNextLogProbs)
 
-        # if the current token is a start token
-        if tokenized_text[i].startswith("▁"):
+        # If the immediate next token is a continuation of the current one,
+        #   add its log probability to a compound logProb and concatenate
+        #   the token to the currentWord string, then return control to the
+        #   beginning of the loop
+        if tokenized_text[i + 1].startswith("##"):
+            compoundBigLogProb += bigLogProb
+            compoundSmallLogProb += smallLogProb
+            compoundBigPreds = bigPreds
+            compoundSmallPreds = smallPreds
+            currentWord += tokenized_text[i]
+            continue
+        # If either the compound large-context logprob or the compound
+        #   small-context logprob is not equal to zero (i.e. they currently
+        #   hold the value of an incomplete multi-token word), add the final
+        #   token's logprob and concatenate it to currentWord
+        if compoundBigLogProb != 0 or compoundSmallLogProb != 0:
+            compoundBigLogProb += bigLogProb
+            compoundSmallLogProb += smallLogProb
+            currentWord += tokenized_text[i]
+            currentWord = currentWord.replace("##", "")
+        # If the next token does not start with "##" and the current token is
+        #   not part of a multi-token word, simply assign the predictions and
+        #   log probabilities
+        else:
             compoundBigLogProb = bigLogProb
             compoundSmallLogProb = smallLogProb
             compoundBigPreds = bigPreds
             compoundSmallPreds = smallPreds
             currentWord = tokenized_text[i]
-        # If the current token is a continuation token
-        else:
-            compoundBigLogProb += bigLogProb
-            compoundSmallLogProb += smallLogProb
-            currentWord += tokenized_text[i]
-        
-        # if the next token is not a start token or the end of sequence, don't do any more work
-        #   because that means the next token is a continuation token
-        if not (tokenized_text[i + 1].startswith("▁") or tokenized_text[i + 1] == "</s>"):
-            continue
-            
-        currentWord = currentWord.replace("▁", "")
         
         # Compute the no-context log probabilities of the current word and
         #   the predictions generated by the small context model
         noContextLogProb = noContext(currentWord)
         noPredsLogProbs = []
         for j in smallPreds:
-            processed_word = j.replace("▁", "")
-            noPredsLogProbs.append(noContext(processed_word))
+            noPredsLogProbs.append(noContext(j))
 
         results.append(dict(
             id = resultID,
@@ -199,14 +196,71 @@ def compute_scores(input_text):
 def form():
     return render_template("home.html")
 
-# @app.route('/', methods=['POST'])
-# def result():
-#     data = request.get_json()
-#     text = data["text"]
+@app.route('/', methods=['POST'])
+def result():
+    # data = request.get_json()
+    # text = data["text"]
 
-#     results, usedModels = compute_scores(text)
+    src = open("src.txt", "r")
+    textList = sent_tokenize(src.read())
+    
+    fo = open("log.txt", "w")
+
+    for i in textList:
+        fo.write(i)
+        results, usedModels = compute_scores(i)
+
+        origWords = [res for res in filter(origCheck, results)]
+        bigContextRes = [res for res in filter(bigCheck, origWords)]
+        noContextRes = [res for res in filter(noCheck, origWords)]
+        bigToNoRatios = [bigContextRes[i]['score'] - noContextRes[i]['score'] for i in range(0, len(bigContextRes))]
+
+        blank = bigContextRes[bigToNoRatios.index(max(bigToNoRatios))]
+        blankedWord = blank['word']
+        blankID = blank['id']
+
+        fo.write(' Blanked word: ' + blankedWord)
+
+        predsList = []
+        for res in filter(predCheck, results):
+            if res['id'] == blankID and res['model'] == "smallContext":
+                predsList.append(res)
+
+        fo.write(' Predictions: ')
+        for i in range(0, len(predsList)):
+            fo.write(predsList[i]['word'] + ' ')
+
+        fo.write('\n')
+
+    src.close()
+    fo.close()
         
-#     return {
-#         'results': results,
-#         'usedModels': usedModels
-#     }
+    return {
+        None
+        # 'results': results,
+        # 'usedModels': usedModels
+    }
+
+def origCheck(i):
+    if i['src'] == "original":
+        return True
+    else:
+        return False
+        
+def bigCheck(i):
+    if i['model'] == "bigContext":
+        return True
+    else:
+        return False
+
+def noCheck(i):
+    if i['model'] == "noContext":
+        return True
+    else:
+        return False
+
+def predCheck(i):
+    if i['src'] == "smallContext":
+        return True
+    else:
+        return False
