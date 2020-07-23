@@ -4,6 +4,8 @@ import string
 import pandas as pd
 import spacy
 from spacy import displacy
+import difflib
+from difflib import Differ, SequenceMatcher
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 en_ROMANCE_model_name = 'Helsinki-NLP/opus-mt-en-ROMANCE'
@@ -13,8 +15,6 @@ en_ROMANCE = MarianMTModel.from_pretrained(en_ROMANCE_model_name).to(device)
 ROMANCE_en_model_name = 'Helsinki-NLP/opus-mt-ROMANCE-en'
 ROMANCE_en_tokenizer = MarianTokenizer.from_pretrained(ROMANCE_en_model_name)
 ROMANCE_en = MarianMTModel.from_pretrained(ROMANCE_en_model_name).to(device)
-
-original_postprocess = True
 
 class CustomMTModel(MarianMTModel):
     def postprocess_next_token_scores(self, scores, input_ids, *a, **kw):
@@ -32,43 +32,73 @@ class CustomMTModel(MarianMTModel):
 
 ROMANCE_en.__class__ = CustomMTModel
 
-def score_prefix(machine_translation, prefix):
+# parameters: machine_translation, the spanish translation
+#             start, the forced beginning of the english. 
+#             prefix_only, if true no new tokens will be generated after param 'start'
+# returns:the final text (will be the same as 'start' if prefix_only)
+#         the expected result (machine translation to english of the spanish input)
+#         list of tokens in the final sequence
+#         list of top 10 predictions for each token
+#         score for average predictability
+#######################################################################################
+def incremental_generation(machine_translation, start, prefix_only):
     tokenizer = ROMANCE_en_tokenizer
     model = ROMANCE_en
-    tokenized_prefix = tokenizer.convert_tokens_to_ids(en_ROMANCE_tokenizer.tokenize(prefix.strip()))
+    tokenized_prefix = tokenizer.convert_tokens_to_ids(en_ROMANCE_tokenizer.tokenize(start.strip()))
     prefix = torch.LongTensor(tokenized_prefix).to(device)
 
     batch = tokenizer.prepare_translation_batch([machine_translation.replace("<pad> ", '')]).to(device)
-    english_encoded = model.get_encoder()(**batch)
+    original_encoded = model.get_encoder()(**batch)
     decoder_start_token = model.config.decoder_start_token_id
     partial_decode = torch.LongTensor([decoder_start_token]).to(device).unsqueeze(0)
-    past = (english_encoded, None)
+    past = (original_encoded, None)
+
+    #machine translation for comparative purposes
+    translation_tokens = model.generate(**batch)
+    auto_translation = tokenizer.decode(translation_tokens[0]).split("<pad>")[1]
+
     num_tokens_generated = 0
-    total = 0
+    prediction_list = []
     MAX_LENGTH = 100
-    
-    #stop when </s> token generated, or max num tokens exceded (just in case)
+    total = 0
+
+    #generate tokens incrementally 
     while True:
         model_inputs = model.prepare_inputs_for_generation(
-        partial_decode, past=past, attention_mask=batch['attention_mask'], use_cache=model.config.use_cache
+            partial_decode, past=past, attention_mask=batch['attention_mask'], use_cache=model.config.use_cache
         )
         with torch.no_grad():
             model_outputs = model(**model_inputs)
+
         next_token_logits = model_outputs[0][:, -1, :]
         past = model_outputs[1]
-        #start with user inputted beginning
+        
+        #start with designated beginning
         if num_tokens_generated < len(prefix):
             next_token_to_add = prefix[num_tokens_generated]
+        elif prefix_only == True:
+            break
         else:
             next_token_to_add = next_token_logits[0].argmax()
+
+        #calculate score
         next_token_logprobs = next_token_logits - next_token_logits.logsumexp(1, True)
         token_score = next_token_logprobs[0][next_token_to_add].item()
         total += token_score
 
+        #append top 10 predictions for each token to list
+        decoded_predictions = []
+        for tok in next_token_logits[0].topk(10).indices:
+            decoded_predictions.append(tokenizer.convert_ids_to_tokens(tok.item()).replace('\u2581', '\u00a0'))
+        
+        #list of lists of predictions
+        prediction_list.append(decoded_predictions)
+
         #add new token to tokens so far
         partial_decode = torch.cat((partial_decode, next_token_to_add.unsqueeze(0).unsqueeze(0)), -1)
-        num_tokens_generated+= 1
+        num_tokens_generated += 1
 
+        #stop generating at </s>, or when max num tokens exceded
         if next_token_to_add.item() == 0 or not (num_tokens_generated < MAX_LENGTH):
             break
 
@@ -78,8 +108,14 @@ def score_prefix(machine_translation, prefix):
 
     final = tokenizer.decode(partial_decode[0]).replace("<pad>", '')
     score = round(total/(len(decoded_tokens)), 3)
-
-    return (score, final.lstrip())
+    print(final)
+    
+    return {"final": final.lstrip(),
+            "expected" : auto_translation,
+            "tokens" : decoded_tokens,
+            "predictions" : prediction_list,
+            "score" : score
+            }
 
 def translate(tokenizer, model, text, num_outputs):   
     """Use beam search to get a reasonable translation of 'text'"""
@@ -95,7 +131,8 @@ def translate(tokenizer, model, text, num_outputs):
     tokenizer.current_spm = tokenizer.spm_target
     return [tokenizer.decode(t, skip_special_tokens=True, clean_up_tokenization_spaces=False) for t in translated]
 
-#https://stackoverflow.com/questions/39100652/python-chunking-others-than-noun-phrases-e-g-prepositional-using-spacy-etc
+#get prepositional phrases
+#adapted from https://stackoverflow.com/questions/39100652/python-chunking-others-than-noun-phrases-e-g-prepositional-using-spacy-etc
 def get_pps(doc):
     pps = []
     for token in doc:
@@ -116,10 +153,9 @@ def get_adv_clause(doc):
 
 def generate_alternatives(english):
     nlp = spacy.load("en_core_web_sm")
-    sentence = english
+    sentence =  english
     doc = nlp(sentence)
     phrases = []
-
 
     #get prepositional phrases and blacklist OPs 
     ROMANCE_en.off_limits = []
@@ -157,7 +193,7 @@ def generate_alternatives(english):
     print(phrases)
 
     #prepare input for translation
-    ROMANCE_en.original_postprocess = True
+    ROMANCE_en.original_postprocess = True;
     english = ">>es<<" + sentence
     engbatch = en_ROMANCE_tokenizer.prepare_translation_batch([english]).to(device)
     eng_to_spanish = en_ROMANCE.generate(**engbatch).to(device)
@@ -166,6 +202,7 @@ def generate_alternatives(english):
     #generate alternatives starting with each selected phrase
     results = []
     for selection in set(phrases):
+        resultset = []
         ROMANCE_en_tokenizer.current_spm = ROMANCE_en_tokenizer.spm_target
         tokens = ROMANCE_en_tokenizer.tokenize(selection)
         ROMANCE_en.selected_tokens = ROMANCE_en_tokenizer.convert_tokens_to_ids(tokens)
@@ -173,80 +210,139 @@ def generate_alternatives(english):
         ROMANCE_en.original_postprocess = False
         top50 = translate(ROMANCE_en_tokenizer, ROMANCE_en, ">>en<<" + machine_translation, 50)
         for element in top50[0:3]:
-            results.append(score_prefix(machine_translation, element))
+            res = incremental_generation(machine_translation, element, prefix_only=False)
+            resultset.append((res['score'], res['final']))
+        results.append(resultset)
 
     #count content words in original and each alternative to catch options that repeat or leave off important phrases
     important_words = [token.text for token in doc if token.is_stop != True and token.is_punct != True]
     wordcount = []
     for word in important_words:
         wordcount.append((word, sentence.count(word))) 
-    idx = 0
-    for score, sen in results:
-        resdoc = nlp(sen)
-        important = [token.text for token in resdoc if token.is_stop != True and token.is_punct != True]
-        if len(important) - len(important_words) not in [-1, 0, 1]:
-            results[idx] = (score-10, sen)
-        else:
-            for el in wordcount:
-                if sen.count(el[0]) > el[1]:
-                    results[idx] = (score-10, sen)
-        idx += 1
+    for resultset in results:
+        idx = 0
+        for score, sen in resultset:
+            resdoc = nlp(sen)
+            important = [token.text for token in resdoc if token.is_stop != True and token.is_punct != True]
+            if len(important) - len(important_words) not in [-1, 0, 1]:
+                resultset[idx] = (score-10, sen)
+            else:
+                for el in wordcount:
+                    if sen.count(el[0]) > el[1]:
+                        resultset[idx] = (score-10, sen)
+            idx += 1
         
     #sort results with highest score first                
-    all_sorted = sorted(((score, result) for score, result in results), reverse=True)
-    print(all_sorted)
+    all_sorted = sorted(results, key=lambda x: x[0])[::-1]
 
     #select prepositional and noun phrases to be highlighted 
-    top = nlp(all_sorted[0][1])
+    top = nlp(all_sorted[0][0][1])
     highlight = []
     for pphrase in get_pps(top):
         highlight.append(pphrase)
     for chunk in doc.noun_chunks:
         if chunk.text not in ' '.join(highlight):
             highlight.append(chunk.text)
-
     color_code_chunks = []
-    for score, text in all_sorted:
-        if score > -10:
-            ph_and_idx = []
-            for ph in highlight:
-                starting_idx = text.lower().find(ph.lower())
-                ph_and_idx.append((ph, starting_idx))
+    for optionset in all_sorted:
+        color_code_subset = []
+        for score, text in optionset:
+            if score > -10:
+                ph_and_idx = []
+                for ph in highlight:
+                    starting_idx = text.lower().find(ph.lower())
+                    ph_and_idx.append((ph, starting_idx))
 
-            order = sorted((score, text) for text, score in ph_and_idx)
-            ordered_phrases = [phrase for score, phrase in order]
-            print(ordered_phrases)
+                order = sorted((score, text) for text, score in ph_and_idx)
+                ordered_phrases = [phrase for score, phrase in order]
 
-            new_sentence = text
-            print(new_sentence)
-            final_sentence = []
-            x = 0
-            for phrase in ordered_phrases:
-                if phrase.lower() in text.lower():
-                    print(phrase)
-                    starting_idx = text.lower().find(phrase.lower())
-                    print("test: ",(new_sentence.lower().split(phrase.lower())))
-
-                    final_sentence.append((new_sentence.lower().split(phrase.lower())[0], 0))
-                    print(final_sentence)
-                    new_sentence = new_sentence.lower().split(phrase.lower())[1]
-                    final_sentence.append((phrase, highlight.index(phrase) + 1))
-                x += 1
-            final_sentence.append((new_sentence, 0))
-            color_code_chunks.append(final_sentence)
+                new_sentence = text
+                final_sentence = []
+                x = 0
+                for phrase in ordered_phrases:
+                    if phrase.lower() in text.lower():
+                        starting_idx = text.lower().find(phrase.lower())
+                        final_sentence.append((new_sentence.lower().split(phrase.lower())[0], 0))
+                        new_sentence = new_sentence.lower().split(phrase.lower())[-1]
+                        final_sentence.append((phrase, highlight.index(phrase) + 1))
+                    x += 1
+                final_sentence.append((new_sentence, 0))
+                color_code_subset.append(final_sentence)
+        color_code_chunks.append(color_code_subset)
     
     #messy way to capitalize sentences
-    for chunk in color_code_chunks:
-        if chunk[0][0] == '':
-            first = chunk[1][0]
-            capitalized = first.split(' ')[0].capitalize() + ' ' + ' '.join(first.split(' ')[1:])
-            chunk[1] = (capitalized, chunk[1][1])
-        else:
-            first = chunk[0][0]
-            capitalized = first.split(' ')[0].capitalize() + ' ' + ' '.join(first.split(' ')[1:])
-            chunk[0] = (capitalized, chunk[0][1])
+    for group in color_code_chunks:
+        for chunk in group:
+            if chunk[0][0] == '':
+                first = chunk[1][0]
+                capitalized = first.split(' ')[0].capitalize() + ' ' + ' '.join(first.split(' ')[1:])
+                chunk[1] = (capitalized, chunk[1][1])
+            else:
+                first = chunk[0][0]
+                capitalized = first.split(' ')[0].capitalize() + ' ' + ' '.join(first.split(' ')[1:])
+                chunk[0] = (capitalized, chunk[0][1])
 
-    return {"alternatives" : [result for score, result in all_sorted],
-            "scores" : [score for score, result in all_sorted],
+    alternatives = []
+    scores = []
+    for subset in all_sorted:
+        altgroup = []
+        for score, result in subset:
+            altgroup.append(result)
+        alternatives.append(altgroup)
+
+    return {"alternatives" : alternatives,
             "colorCoding" : color_code_chunks
         }
+
+def incremental_alternatives(sentence, prefix, recalculation):
+    ROMANCE_en.original_postprocess = True
+    english = ">>es<<" + sentence
+    engbatch = en_ROMANCE_tokenizer.prepare_translation_batch([english]).to(device)
+    eng_to_spanish = en_ROMANCE.generate(**engbatch).to(device)
+    machine_translation = en_ROMANCE_tokenizer.decode(eng_to_spanish[0]).replace("<pad> ", '')
+    if recalculation:
+        sentence = prefix
+    print(machine_translation)
+    print(sentence)
+    return(incremental_generation(machine_translation, sentence, False))
+
+def completion(sentence, prefix):
+    prefix = prefix.replace(" ", '', 1)
+    ROMANCE_en.original_postprocess = True
+    english = ">>es<<" + sentence
+    engbatch = en_ROMANCE_tokenizer.prepare_translation_batch([english]).to(device)
+    eng_to_spanish = en_ROMANCE.generate(**engbatch).to(device)
+    machine_translation = en_ROMANCE_tokenizer.decode(eng_to_spanish[0]).replace("<pad> ", '')
+
+    ROMANCE_en_tokenizer.current_spm = ROMANCE_en_tokenizer.spm_target
+    tokens = ROMANCE_en_tokenizer.tokenize(prefix)
+    ROMANCE_en.selected_tokens = ROMANCE_en_tokenizer.convert_tokens_to_ids(tokens)
+
+    ROMANCE_en.original_postprocess = False
+    top5 = translate(ROMANCE_en_tokenizer, ROMANCE_en, ">>en<<" + machine_translation, 5)
+
+    differences = []
+    for option in top5:
+        diffs = []
+        a = sentence.split()
+        print(a)
+        b = option.split()
+        print(b)
+        s = SequenceMatcher(None, a, b)
+        for tag, i1, i2, j1, j2 in s.get_opcodes():
+            if tag != 'equal':
+                x = j1 - len(prefix.split()) + 1
+                for string in b[j1:j2]:
+                    print(string)
+                    diffs.append(x)
+                    x += 1
+        differences.append(diffs)
+    print("prefix length: ", len(prefix.split()))
+
+    endings = []
+    for s in top5:
+        endings.append(s.replace(prefix, ''))
+
+    return {'endings' : endings,
+            'differences' : differences
+            }
