@@ -1,0 +1,43 @@
+<html>
+    <meta charset="utf-8">
+    <head>
+        <link rel="stylesheet" type="text/css" href="%% url_for('static', filename='css/mystyle.css') %%">
+    </head>
+    <body>
+        <div>
+            <a href='/'>Home</a>
+        </div>
+        <div style="text-align:center">
+            <button id='generate' style="width:100px; height:50px" onclick='generateQuestion();'>Generate a question</button>
+        </div>
+        <br> <br>
+        
+        <div id="question">
+            <span
+                class="tooltip"
+                v-for="item in output"
+                v-bind:style="{ fontSize: 24 }"
+            >
+                {{ item.word }}
+                <div class="tooltiptext" v-if="item.blank === true">
+                    <ol>
+                        <li v-for="pred in shuffledPreds" v-on:click="checkAnswer(pred, $event.srcElement)">
+                            {{ pred }}
+                        </li>
+                    </ol>
+                </div>
+            </span>
+        </div>
+        <br> <br>
+        
+        <div id="history">History:
+            <div v-for="(entry, index) in history">
+                <span>Sentence {{ index + 1 }}: {{ entry.sentence }} Total guesses: {{ entry.guesses }}</span>
+                <span v-if="entry.complete === true"> The correct answer was: {{ entry.answer }}</span>
+            </div>
+        </div>
+        
+        <script src="%% url_for('static', filename='js/vue.js') %%"></script>
+        <script src="%% url_for('static', filename='js/quiz.js') %%"></script>
+    </body>
+</html>
